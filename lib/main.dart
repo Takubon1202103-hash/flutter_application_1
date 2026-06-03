@@ -1,13 +1,33 @@
 import 'package:camera/camera.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'firebase_options.dart';
 import 'screens/camera_screen.dart';
+
+// バックグラウンドで受信した通知を処理するトップレベル関数
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('Background message: ${message.messageId}');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // カメラの一覧を起動時に取得しておく
-  final cameras = await availableCameras();
+
+  // Firebase 初期化
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // バックグラウンド通知ハンドラを登録
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // 縦画面固定
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // カメラ一覧を起動時に取得
+  final cameras = await availableCameras();
+
   runApp(MyApp(cameras: cameras));
 }
 
@@ -32,9 +52,47 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
   const HomeScreen({super.key, required this.cameras});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _setupNotifications();
+  }
+
+  Future<void> _setupNotifications() async {
+    final messaging = FirebaseMessaging.instance;
+
+    // 通知許可リクエスト（iOS / Android 13+）
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // FCM トークンを取得（後でサーバーに登録する）
+    final token = await messaging.getToken();
+    debugPrint('FCM Token: $token');
+
+    // フォアグラウンドで通知を受信したときの処理
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('Foreground message: ${message.notification?.title}');
+      // TODO: 通知バナーを表示し、撮影画面に遷移する
+    });
+
+    // 通知タップでアプリが起動したときの処理
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('Notification tapped: ${message.notification?.title}');
+      // TODO: 撮影画面に遷移する
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

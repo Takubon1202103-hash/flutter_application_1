@@ -58,10 +58,10 @@ android/key.properties
 *.keystore
 *.jks
 
-# Firebase 設定ファイル（プロジェクト固有のシークレットを含む）
+# Firebase 設定ファイル（シークレットを含む・各自が flutterfire configure で生成する）
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
+# firebase_options.dart はコミットしてOK（シークレットなし）
 firebase.json
 .firebaserc
 
