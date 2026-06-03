@@ -1,0 +1,78 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# -------------------------------------------------------
+# 秘密情報・署名キー（チームメンバーには個別で共有すること）
+# -------------------------------------------------------
+
+# 環境変数・APIキー
+.env
+.env.*
+!.env.example
+
+# Android 署名設定（パスワードが含まれるため絶対にコミットしない）
+android/key.properties
+*.keystore
+*.jks
+
+# Firebase 設定ファイル（プロジェクト固有のシークレットを含む）
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+firebase.json
+.firebaserc
+
+# Apple Developer 証明書・キー
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# macOS ビルド成果物
+/macos/Flutter/ephemeral/
+
+# Linux ビルド成果物
+/linux/flutter/ephemeral/
