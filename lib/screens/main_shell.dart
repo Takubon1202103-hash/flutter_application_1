@@ -16,10 +16,10 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   static const _screens = [
-    TimelineScreen(),
-    FriendsScreen(),
-    VideoHistoryScreen(),
-    ProfileScreen(),
+    TimelineScreen(),     // 0: ホーム
+    ProfileScreen(),      // 1: マイページ
+    VideoHistoryScreen(), // 2: 写真
+    FriendsScreen(),      // 3: 友達
   ];
 
   void _openCamera() {
@@ -80,16 +80,10 @@ class _BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                icon: Icons.people_outline,
-                label: '友達',
+                icon: Icons.person_outline,
+                label: 'マイページ',
                 selected: currentIndex == 1,
                 onTap: () => onTap(1),
-              ),
-              _NavItem(
-                icon: Icons.image_outlined,
-                label: '写真',
-                selected: currentIndex == 2,
-                onTap: () => onTap(2),
               ),
               // Center camera button
               Expanded(
@@ -121,8 +115,14 @@ class _BottomNavBar extends StatelessWidget {
                 ),
               ),
               _NavItem(
-                icon: Icons.person_outline,
-                label: 'マイページ',
+                icon: Icons.image_outlined,
+                label: '写真',
+                selected: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+              _NavItem(
+                icon: Icons.people_outline,
+                label: '友達',
                 selected: currentIndex == 3,
                 onTap: () => onTap(3),
               ),
