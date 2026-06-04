@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../services/location_service.dart';
 import '../services/post_service.dart';
 import '../services/shot_state.dart';
+import '../utils/video_filters.dart';
 
 const int kMaxRecordingSeconds = 60;
 
@@ -39,6 +40,10 @@ class _CameraScreenState extends State<CameraScreen>
   XFile? _frontVideo;
   bool _recordingFront = false;
 
+  // 編集
+  int _filterIndex = 0;
+  final _captionController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +57,7 @@ class _CameraScreenState extends State<CameraScreen>
     _recordingTimer?.cancel();
     _controller?.dispose();
     _previewController?.dispose();
+    _captionController.dispose();
     super.dispose();
   }
 
@@ -183,11 +189,18 @@ class _CameraScreenState extends State<CameraScreen>
       final isLate = shotState.calculateIsLate(DateTime.now());
       final locationName = await LocationService.getCurrentLocationName();
 
+      final caption = _captionController.text.trim();
+      final filterName = _filterIndex > 0
+          ? kVideoFilters[_filterIndex].name
+          : null;
+
       await PostService.uploadPost(
         File(_recordedVideo!.path),
         isLate: isLate,
         frontVideoFile: _frontVideo != null ? File(_frontVideo!.path) : null,
         locationName: locationName,
+        caption: caption.isNotEmpty ? caption : null,
+        filterName: filterName,
       );
 
       if (mounted) {
@@ -482,70 +495,133 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   // ───────────────────────────────────────────────
-  // 撮影後プレビュー画面
+  // 撮影後プレビュー＋編集画面
   // ───────────────────────────────────────────────
   Widget _buildPreviewScreen() {
+    final filter = kVideoFilters[_filterIndex];
+
     return Scaffold(
       backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child:
-                  _previewController != null &&
-                          _previewController!.value.isInitialized
-                      ? Center(
-                        child: AspectRatio(
-                          aspectRatio: _previewController!.value.aspectRatio,
-                          child: VideoPlayer(_previewController!),
-                        ),
-                      )
-                      : const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-            ),
-
+            // 上部バー
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.refresh, color: Colors.white),
-                      label: const Text(
-                        '撮り直す',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white54),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: _retake,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    onPressed: _isUploading ? null : _retake,
+                    tooltip: '撮り直す',
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: _isUploading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.check),
-                      label: Text(_isUploading ? 'アップロード中...' : '投稿する'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: _isUploading ? null : _uploadAndPost,
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    icon: _isUploading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check, size: 18),
+                    label: Text(_isUploading ? '投稿中...' : '投稿する'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
                     ),
+                    onPressed: _isUploading ? null : _uploadAndPost,
                   ),
                 ],
+              ),
+            ),
+
+            // 動画プレビュー（フィルター適用）
+            Expanded(
+              child: _previewController != null &&
+                      _previewController!.value.isInitialized
+                  ? Center(
+                      child: AspectRatio(
+                        aspectRatio: _previewController!.value.aspectRatio,
+                        child: filter.colorFilter != null
+                            ? ColorFiltered(
+                                colorFilter: filter.colorFilter!,
+                                child: VideoPlayer(_previewController!),
+                              )
+                            : VideoPlayer(_previewController!),
+                      ),
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+            ),
+
+            // フィルター選択
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                itemCount: kVideoFilters.length,
+                itemBuilder: (context, index) {
+                  final selected = _filterIndex == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => _filterIndex = index),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(20),
+                        border: selected
+                            ? null
+                            : Border.all(color: const Color(0xFF333333)),
+                      ),
+                      child: Text(
+                        kVideoFilters[index].name,
+                        style: TextStyle(
+                          color: selected ? Colors.black : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // キャプション入力
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: TextField(
+                controller: _captionController,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 2,
+                maxLength: 100,
+                decoration: InputDecoration(
+                  hintText: 'キャプションを追加...',
+                  hintStyle: const TextStyle(color: Color(0xFF555555)),
+                  prefixIcon: const Icon(Icons.edit_outlined,
+                      color: Color(0xFF555555), size: 20),
+                  filled: true,
+                  fillColor: const Color(0xFF1A1A1A),
+                  counterStyle: const TextStyle(color: Color(0xFF555555)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
           ],

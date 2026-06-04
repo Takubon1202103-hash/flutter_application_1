@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../services/like_service.dart';
 import '../services/shot_state.dart';
+import '../utils/video_filters.dart';
 import 'camera_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
@@ -304,6 +305,8 @@ class _TikTokFeedState extends State<_TikTokFeed> {
                   photoUrl: data['photoUrl'] as String?,
                   timeAgo: _formatTimeAgo(createdAt),
                   locationName: data['locationName'] as String?,
+                  caption: data['caption'] as String?,
+                  filterName: data['filterName'] as String?,
                   isOwn: isOwn,
                   isLate: isLate,
                   lateLabel: lateLabel,
@@ -336,6 +339,8 @@ class _VideoPage extends StatefulWidget {
   final String? photoUrl;
   final String timeAgo;
   final String? locationName;
+  final String? caption;
+  final String? filterName;
   final bool isOwn;
   final bool isLate;
   final String lateLabel;
@@ -347,6 +352,8 @@ class _VideoPage extends StatefulWidget {
     required this.photoUrl,
     required this.timeAgo,
     required this.locationName,
+    required this.caption,
+    required this.filterName,
     required this.isOwn,
     required this.isLate,
     required this.lateLabel,
@@ -393,7 +400,18 @@ class _VideoPageState extends State<_VideoPage> {
             Center(
               child: AspectRatio(
                 aspectRatio: controller.value.aspectRatio,
-                child: VideoPlayer(controller),
+                child: Builder(builder: (_) {
+                  final f = kVideoFilters.firstWhere(
+                    (f) => f.name == widget.filterName,
+                    orElse: () => kVideoFilters.first,
+                  );
+                  return f.colorFilter != null
+                      ? ColorFiltered(
+                          colorFilter: f.colorFilter!,
+                          child: VideoPlayer(controller),
+                        )
+                      : VideoPlayer(controller);
+                }),
               ),
             )
           else
@@ -527,6 +545,23 @@ class _VideoPageState extends State<_VideoPage> {
                     child: const Text('あなたの投稿',
                         style:
                             TextStyle(color: Colors.red, fontSize: 11)),
+                  ),
+                ],
+                if (widget.caption != null &&
+                    widget.caption!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.caption!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      height: 1.4,
+                      shadows: [
+                        Shadow(blurRadius: 8, color: Colors.black87)
+                      ],
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],

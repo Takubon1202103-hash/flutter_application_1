@@ -14,6 +14,8 @@ class PostService {
     bool isLate = false,
     File? frontVideoFile,
     String? locationName,
+    String? caption,
+    String? filterName,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('Not logged in');
@@ -61,6 +63,8 @@ class PostService {
       'thumbnailUrl': thumbnailUrl,
       'isLate': isLate,
       'locationName': locationName,
+      'caption': caption,
+      'filterName': filterName,
       'postedAt': Timestamp.fromDate(now),
       'createdAt': FieldValue.serverTimestamp(),
     });
