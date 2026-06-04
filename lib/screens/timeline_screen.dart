@@ -518,6 +518,23 @@ class _VideoPageState extends State<_VideoPage> {
                     ),
                   ],
                 ),
+                if (widget.caption != null &&
+                    widget.caption!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.caption!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      height: 1.3,
+                      shadows: [
+                        Shadow(blurRadius: 4, color: Colors.black87)
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
