@@ -241,8 +241,9 @@ class _TikTokFeedState extends State<_TikTokFeed> {
               .where('userId', whereIn: targetIds)
               .snapshots(),
           builder: (context, postsSnap) {
-            final docs = [...(postsSnap.data?.docs ?? [])]
-              ..sort((a, b) {
+            final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[
+              ...(postsSnap.data?.docs ?? [])
+            ]..sort((a, b) {
                 final aT =
                     (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
                 final bT =
