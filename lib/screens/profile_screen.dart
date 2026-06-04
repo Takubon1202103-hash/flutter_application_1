@@ -24,6 +24,15 @@ class ProfileScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              onPressed: () {
+                // 通知画面への遷移（未実装）
+              },
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IconButton(
               icon: const Icon(Icons.settings, color: Colors.white),
