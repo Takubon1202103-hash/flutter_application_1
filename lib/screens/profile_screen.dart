@@ -6,6 +6,7 @@ import '../services/follow_service.dart';
 import '../widgets/video_thumbnail_widget.dart';
 import 'follow_list_screen.dart';
 import 'post_detail_screen.dart';
+import 'settings_screen.dart';
 import 'video_view_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -29,9 +30,11 @@ class ProfileScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: () async {
-                await AuthService.signOut();
+              icon: const Icon(Icons.settings, color: Colors.white),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
               },
             ),
           ),
@@ -203,10 +206,85 @@ class _MyPosts extends StatelessWidget {
                   const Center(
                     child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 32),
                   ),
+                  // ピン留めボタン
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: _PinButton(postId: docs[index].id),
+                  ),
                 ],
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _PinButton extends StatelessWidget {
+  final String postId;
+  const _PinButton({required this.postId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .snapshots(),
+      builder: (context, snap) {
+        final pinnedPosts = List<String>.from(
+          snap.data?.get('pinnedPosts') as List<dynamic>? ?? []
+        );
+        final isPinned = pinnedPosts.contains(postId);
+
+        return GestureDetector(
+          onTap: () async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) return;
+
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+            final pins = List<String>.from(
+              userDoc.data()?['pinnedPosts'] as List<dynamic>? ?? []
+            );
+
+            if (pins.contains(postId)) {
+              pins.remove(postId);
+            } else {
+              if (pins.length < 3) {
+                pins.add(postId);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('ピン留めは最大3件までです')),
+                  );
+                }
+                return;
+              }
+            }
+
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .update({'pinnedPosts': pins});
+          },
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPinned ? Icons.bookmark : Icons.bookmark_outline,
+              color: isPinned ? Colors.red : Colors.white70,
+              size: 16,
+            ),
+          ),
         );
       },
     );
