@@ -9,6 +9,7 @@ import 'follow_list_screen.dart';
 import 'post_detail_screen.dart';
 import 'settings_screen.dart';
 import 'video_history_screen.dart';
+import 'today_posts_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -269,17 +270,25 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-// 投稿グリッド
+// 今日の最新投稿1件表示
 class _MyPosts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const SizedBox();
 
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('posts')
           .where('userId', isEqualTo: user.uid)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .orderBy('createdAt', descending: true)
+          .limit(1)
           .snapshots(),
       builder: (context, postsSnap) {
         if (postsSnap.connectionState == ConnectionState.waiting) {
@@ -295,7 +304,7 @@ class _MyPosts extends StatelessWidget {
                 Icon(Icons.videocam_off_outlined, color: Color(0xFF2A2A2A), size: 48),
                 SizedBox(height: 12),
                 Text(
-                  'まだ投稿がありません',
+                  '今日の投稿がありません',
                   style: TextStyle(color: Color(0xFF555555), fontSize: 13),
                 ),
               ],
@@ -303,141 +312,42 @@ class _MyPosts extends StatelessWidget {
           );
         }
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 9 / 16,
-          ),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data();
-            final videoUrl = data['videoUrl'] as String?;
-            final thumbnailUrl = data['thumbnailUrl'] as String?;
+        final data = docs[0].data();
+        final videoUrl = data['videoUrl'] as String?;
+        final thumbnailUrl = data['thumbnailUrl'] as String?;
 
-            return GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PostDetailScreen(
-                      postId: docs[index].id,
-                      postData: data,
-                    ),
-                  ),
-                );
-              },
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 動画サムネイル
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: const Color(0xFF1A1A1A),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          VideoThumbnailWidget(
-                            thumbnailUrl: thumbnailUrl,
-                            videoUrl: videoUrl,
-                          ),
-                          Center(
-                            child: Icon(
-                              Icons.play_circle_outline,
-                              color: Colors.white.withOpacity(0.6),
-                              size: 28,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ピン留めボタン
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _PinButton(postId: docs[index].id),
-                  ),
-                ],
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const TodayPostsScreen(),
               ),
             );
           },
-        );
-      },
-    );
-  }
-}
-
-// ピン留めボタンウィジェット
-class _PinButton extends StatelessWidget {
-  final String postId;
-  const _PinButton({required this.postId});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
-          .snapshots(),
-      builder: (context, snap) {
-        final pinnedPosts = List<String>.from(
-          snap.data?.get('pinnedPosts') as List<dynamic>? ?? []
-        );
-        final isPinned = pinnedPosts.contains(postId);
-
-        return GestureDetector(
-          onTap: () async {
-            final user = FirebaseAuth.instance.currentUser;
-            if (user == null) return;
-
-            final userDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-
-            final pins = List<String>.from(
-              userDoc.data()?['pinnedPosts'] as List<dynamic>? ?? []
-            );
-
-            if (pins.contains(postId)) {
-              pins.remove(postId);
-            } else {
-              if (pins.length < 3) {
-                pins.add(postId);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ピン留めは最大3件までです')),
-                  );
-                }
-                return;
-              }
-            }
-
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .update({'pinnedPosts': pins});
-          },
           child: Container(
-            padding: const EdgeInsets.all(6),
+            height: 300,
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFF1A1A1A),
             ),
-            child: Icon(
-              isPinned ? Icons.bookmark : Icons.bookmark_outline,
-              color: isPinned ? Colors.red : Colors.white70,
-              size: 14,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  VideoThumbnailWidget(
+                    thumbnailUrl: thumbnailUrl,
+                    videoUrl: videoUrl,
+                  ),
+                  Center(
+                    child: Icon(
+                      Icons.play_circle_outlined,
+                      color: Colors.white.withOpacity(0.7),
+                      size: 56,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -445,3 +355,4 @@ class _PinButton extends StatelessWidget {
     );
   }
 }
+
