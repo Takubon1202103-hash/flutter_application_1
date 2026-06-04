@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'timeline_screen.dart';
 import 'friends_screen.dart';
-import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'camera_screen.dart';
 
@@ -18,7 +17,6 @@ class _MainShellState extends State<MainShell> {
   static const _screens = [
     TimelineScreen(),
     FriendsScreen(),
-    NotificationsScreen(),
     ProfileScreen(),
   ];
 
@@ -115,16 +113,10 @@ class _BottomNavBar extends StatelessWidget {
                 ),
               ),
               _NavItem(
-                icon: Icons.notifications_outlined,
-                label: '通知',
-                selected: currentIndex == 2,
-                onTap: () => onTap(2),
-              ),
-              _NavItem(
                 icon: Icons.person_outline,
                 label: 'マイページ',
-                selected: currentIndex == 3,
-                onTap: () => onTap(3),
+                selected: currentIndex == 2,
+                onTap: () => onTap(2),
               ),
             ],
           ),
