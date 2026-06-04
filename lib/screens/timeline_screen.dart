@@ -218,6 +218,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               username: data['username'] ?? 'ユーザー',
               photoUrl: data['photoUrl'] as String?,
               videoUrl: data['videoUrl'] as String?,
+              thumbnailUrl: data['thumbnailUrl'] as String?,
               timeAgo: timeAgo,
               isOwn: isOwn,
               locked: locked,
@@ -242,6 +243,7 @@ class _PostCard extends StatelessWidget {
   final String username;
   final String? photoUrl;
   final String? videoUrl;
+  final String? thumbnailUrl;
   final String timeAgo;
   final bool isOwn;
   final bool locked;
@@ -250,6 +252,7 @@ class _PostCard extends StatelessWidget {
     required this.username,
     required this.photoUrl,
     required this.videoUrl,
+    required this.thumbnailUrl,
     required this.timeAgo,
     required this.isOwn,
     required this.locked,
@@ -351,15 +354,17 @@ class _PostCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(
-              color: const Color(0xFF111111),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: Colors.white24,
-                  size: 64,
-                ),
-              ),
+            if (thumbnailUrl != null)
+              Image.network(
+                thumbnailUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              )
+            else
+              Container(color: const Color(0xFF111111)),
+            const Center(
+              child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
             ),
           if (locked)
             ClipRect(

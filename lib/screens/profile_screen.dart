@@ -175,6 +175,7 @@ class _MyPosts extends StatelessWidget {
           itemBuilder: (context, index) {
             final data = docs[index].data();
             final videoUrl = data['videoUrl'] as String?;
+            final thumbnailUrl = data['thumbnailUrl'] as String?;
             return GestureDetector(
               onTap: () {
                 if (videoUrl == null) return;
@@ -187,11 +188,17 @@ class _MyPosts extends StatelessWidget {
                   ),
                 );
               },
-              child: Container(
-                color: const Color(0xFF1A1A1A),
-                child: const Center(
-                  child: Icon(Icons.play_circle_outline, color: Colors.white24, size: 32),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (thumbnailUrl != null)
+                    Image.network(thumbnailUrl, fit: BoxFit.cover)
+                  else
+                    Container(color: const Color(0xFF1A1A1A)),
+                  const Center(
+                    child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 32),
+                  ),
+                ],
               ),
             );
           },
