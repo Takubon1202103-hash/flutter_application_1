@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,21 +12,34 @@ class AuthService {
   static User? get currentUser => _auth.currentUser;
 
   static Future<UserCredential?> signInWithGoogle() async {
+    UserCredential? credential;
+
     if (kIsWeb) {
-      final provider = GoogleAuthProvider();
-      return _auth.signInWithPopup(provider);
+      credential = await _auth.signInWithPopup(GoogleAuthProvider());
+    } else {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+      final googleAuth = await googleUser.authentication;
+      credential = await _auth.signInWithCredential(
+        GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        ),
+      );
     }
 
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null;
+    if (credential?.user != null) {
+      await _saveUser(credential!.user!);
+    }
+    return credential;
+  }
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    return _auth.signInWithCredential(credential);
+  static Future<void> _saveUser(User user) async {
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'displayName': user.displayName ?? 'ユーザー',
+      'photoUrl': user.photoURL,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   static Future<void> signOut() async {

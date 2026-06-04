@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import 'camera_screen.dart';
+import 'video_view_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -254,6 +255,15 @@ class _PostCard extends StatelessWidget {
     required this.locked,
   });
 
+  void _openVideo(BuildContext context) {
+    if (locked || videoUrl == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VideoViewScreen(videoUrl: videoUrl!, username: username),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -267,7 +277,7 @@ class _PostCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          _buildVideoArea(),
+          _buildVideoArea(context),
         ],
       ),
     );
@@ -333,24 +343,27 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildVideoArea() {
-    return AspectRatio(
-      aspectRatio: 9 / 16,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(
-            color: const Color(0xFF111111),
-            child: const Center(
-              child: Icon(
-                Icons.play_circle_outline,
-                color: Colors.white24,
-                size: 64,
+  Widget _buildVideoArea(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _openVideo(context),
+      child: AspectRatio(
+        aspectRatio: 9 / 16,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              color: const Color(0xFF111111),
+              child: const Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white24,
+                  size: 64,
+                ),
               ),
             ),
-          ),
           if (locked)
             ClipRect(
+
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
@@ -393,6 +406,7 @@ class _PostCard extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }
