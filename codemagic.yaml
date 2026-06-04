@@ -13,10 +13,10 @@ workflows:
     scripts:
       - name: Flutter pub get
         script: flutter pub get
+      - name: Clear SPM cache
+        script: rm -rf ~/Library/Caches/org.swift.swiftpm/artifacts/ || true
       - name: Pod install
         script: cd ios && pod install
-      - name: List available schemes
-        script: xcodebuild -workspace ios/Runner.xcworkspace -list
       - name: Build unsigned IPA
         script: flutter build ipa --release --no-codesign
     artifacts:
