@@ -4,10 +4,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'services/auth_service.dart';
+import 'services/shot_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +26,12 @@ Future<void> main() async {
     debugPrint('Camera not available: $e');
   }
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ShotState(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -51,7 +58,17 @@ class MyApp extends StatelessWidget {
               body: Center(child: CircularProgressIndicator(color: Colors.white)),
             );
           }
-          if (snapshot.hasData) return const MainShell();
+          if (snapshot.hasData) {
+            // ログイン後にShotStateを初期化
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.read<ShotState>().initialize();
+            });
+            return const MainShell();
+          }
+          // ログアウト時にリセット
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<ShotState>().reset();
+          });
           return const LoginScreen();
         },
       ),

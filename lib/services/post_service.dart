@@ -2,23 +2,36 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 class PostService {
   static final _firestore = FirebaseFirestore.instance;
   static final _storage = FirebaseStorage.instance;
 
-  static Future<void> uploadPost(File videoFile) async {
+  static Future<void> uploadPost(
+    File videoFile, {
+    bool isLate = false,
+    File? frontVideoFile,
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('Not logged in');
 
     final baseName = '${user.uid}_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now();
 
-    // 動画アップロード
+    // バックカメラ動画
     final videoRef = _storage.ref().child('videos/$baseName.mp4');
     await videoRef.putFile(videoFile);
     final videoUrl = await videoRef.getDownloadURL();
+
+    // フロントカメラ動画（デュアルモード時）
+    String? frontVideoUrl;
+    if (frontVideoFile != null) {
+      final frontRef = _storage.ref().child('videos/${baseName}_front.mp4');
+      await frontRef.putFile(frontVideoFile);
+      frontVideoUrl = await frontRef.getDownloadURL();
+    }
 
     // サムネ生成
     String? thumbnailUrl;
@@ -43,7 +56,10 @@ class PostService {
       'username': user.displayName ?? 'ユーザー',
       'photoUrl': user.photoURL,
       'videoUrl': videoUrl,
+      'frontVideoUrl': frontVideoUrl,
       'thumbnailUrl': thumbnailUrl,
+      'isLate': isLate,
+      'postedAt': Timestamp.fromDate(now),
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -53,21 +69,4 @@ class PostService {
           .collection('posts')
           .orderBy('createdAt', descending: true)
           .snapshots();
-
-  static Future<bool> hasPostedToday() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
-
-    final snapshot = await _firestore
-        .collection('posts')
-        .where('userId', isEqualTo: user.uid)
-        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .limit(1)
-        .get();
-
-    return snapshot.docs.isNotEmpty;
-  }
 }

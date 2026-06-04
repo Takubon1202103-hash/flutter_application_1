@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../services/post_service.dart';
+import '../services/shot_state.dart';
 
 const int kMaxRecordingSeconds = 60;
 
@@ -29,6 +31,12 @@ class _CameraScreenState extends State<CameraScreen>
   XFile? _recordedVideo;
   VideoPlayerController? _previewController;
   bool _isUploading = false;
+
+  // デュアルカメラモード
+  bool _dualMode = false;
+  XFile? _backVideo;
+  XFile? _frontVideo;
+  bool _recordingFront = false;
 
   @override
   void initState() {
@@ -125,20 +133,30 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final file = await controller.stopVideoRecording();
-      await _previewController?.dispose();
-
-      final preview = VideoPlayerController.file(File(file.path));
-      await preview.initialize();
-
-      if (!mounted) return;
       setState(() {
         _isRecording = false;
         _remainingSeconds = kMaxRecordingSeconds;
-        _recordedVideo = file;
-        _previewController = preview;
       });
-      await preview.setLooping(true);
-      await preview.play();
+
+      // デュアルモード: バック録画完了 → フロントへ
+      if (_dualMode && !_recordingFront) {
+        await _switchToFrontForDual(file);
+        return;
+      }
+
+      // デュアルモード: フロント録画完了
+      if (_dualMode && _recordingFront) {
+        _frontVideo = file;
+        setState(() => _recordingFront = false);
+        // バック動画をプレビューとして使う
+        if (_backVideo != null) {
+          await _setupPreview(_backVideo!);
+        }
+        return;
+      }
+
+      // 通常モード
+      await _setupPreview(file);
     } catch (e) {
       debugPrint('Stop recording error: $e');
       if (mounted) setState(() => _isRecording = false);
@@ -160,8 +178,19 @@ class _CameraScreenState extends State<CameraScreen>
     if (_recordedVideo == null) return;
     setState(() => _isUploading = true);
     try {
-      await PostService.uploadPost(File(_recordedVideo!.path));
-      if (mounted) Navigator.of(context).pop(true);
+      final shotState = context.read<ShotState>();
+      final isLate = shotState.calculateIsLate(DateTime.now());
+
+      await PostService.uploadPost(
+        File(_recordedVideo!.path),
+        isLate: isLate,
+        frontVideoFile: _frontVideo != null ? File(_frontVideo!.path) : null,
+      );
+
+      if (mounted) {
+        shotState.markPosted(DateTime.now());
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -170,6 +199,55 @@ class _CameraScreenState extends State<CameraScreen>
         setState(() => _isUploading = false);
       }
     }
+  }
+
+  // デュアルモード: バック録画完了後にフロントへ自動切替
+  Future<void> _switchToFrontForDual(XFile backFile) async {
+    setState(() {
+      _backVideo = backFile;
+      _recordingFront = true;
+      _isInitialized = false;
+      _isSwitching = true;
+    });
+
+    // フロントカメラに切替
+    final frontIndex = _cameras.indexWhere(
+      (c) => c.lensDirection == CameraLensDirection.front,
+    );
+    if (frontIndex == -1) {
+      // フロントカメラなければそのまま完了
+      setState(() {
+        _recordedVideo = backFile;
+        _recordingFront = false;
+      });
+      await _setupPreview(backFile);
+      return;
+    }
+
+    _selectedCameraIndex = frontIndex;
+    await _setupCamera(_cameras[frontIndex]);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('フロントカメラで自撮りを撮影してください'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _setupPreview(XFile file) async {
+    await _previewController?.dispose();
+    final preview = VideoPlayerController.file(File(file.path));
+    await preview.initialize();
+    if (!mounted) return;
+    setState(() {
+      _recordedVideo = file;
+      _previewController = preview;
+    });
+    await preview.setLooping(true);
+    await preview.play();
   }
 
   Future<void> _retake() async {
@@ -230,18 +308,60 @@ class _CameraScreenState extends State<CameraScreen>
                     icon: const Icon(Icons.close, color: Colors.white, size: 28),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  if (_cameras.length > 1 && !_isRecording)
-                    IconButton(
-                      icon: const Icon(
-                        Icons.flip_camera_ios,
-                        color: Colors.white,
-                        size: 28,
+                  if (!_isRecording) ...[
+                    // デュアルモードトグル
+                    GestureDetector(
+                      onTap: () => setState(() => _dualMode = !_dualMode),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _dualMode ? Colors.white : Colors.white24,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.switch_camera,
+                                color: _dualMode ? Colors.black : Colors.white,
+                                size: 16),
+                            const SizedBox(width: 4),
+                            Text('デュアル',
+                                style: TextStyle(
+                                  color: _dualMode ? Colors.black : Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                          ],
+                        ),
                       ),
-                      onPressed: _switchCamera,
                     ),
+                    if (_cameras.length > 1)
+                      IconButton(
+                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 28),
+                        onPressed: _switchCamera,
+                      ),
+                  ],
                 ],
               ),
             ),
+            // デュアルモード録画状態表示
+            if (_dualMode && _recordingFront)
+              Positioned(
+                top: 70,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Text('フロントカメラ撮影中',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
 
             // 録画中：残り時間バッジ
             if (_isRecording)
