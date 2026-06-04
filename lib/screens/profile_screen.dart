@@ -66,41 +66,9 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _StatsRow extends StatefulWidget {
+class _StatsRow extends StatelessWidget {
   final String uid;
   const _StatsRow({required this.uid});
-
-  @override
-  State<_StatsRow> createState() => _StatsRowState();
-}
-
-class _StatsRowState extends State<_StatsRow> {
-  int _posts = 0;
-  int _followers = 0;
-  int _following = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final postsSnap = await FirebaseFirestore.instance
-        .collection('posts')
-        .where('userId', isEqualTo: widget.uid)
-        .count()
-        .get();
-    final followers = await FollowService.getFollowerCount(widget.uid);
-    final following = await FollowService.getFollowingCount(widget.uid);
-    if (mounted) {
-      setState(() {
-        _posts = postsSnap.count ?? 0;
-        _followers = followers;
-        _following = following;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,11 +77,35 @@ class _StatsRowState extends State<_StatsRow> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _StatItem(label: '投稿', value: '$_posts'),
+          // 投稿数
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('posts')
+                .where('userId', isEqualTo: uid)
+                .snapshots(),
+            builder: (_, snap) => _StatItem(
+              label: '投稿',
+              value: '${snap.data?.docs.length ?? 0}',
+            ),
+          ),
           Container(width: 0.5, height: 32, color: const Color(0xFF2A2A2A)),
-          _StatItem(label: 'フォロワー', value: '$_followers'),
+          // フォロワー数
+          StreamBuilder<int>(
+            stream: FollowService.followerCountStream(uid),
+            builder: (_, snap) => _StatItem(
+              label: 'フォロワー',
+              value: '${snap.data ?? 0}',
+            ),
+          ),
           Container(width: 0.5, height: 32, color: const Color(0xFF2A2A2A)),
-          _StatItem(label: 'フォロー中', value: '$_following'),
+          // フォロー中
+          StreamBuilder<int>(
+            stream: FollowService.followingCountStream(uid),
+            builder: (_, snap) => _StatItem(
+              label: 'フォロー中',
+              value: '${snap.data ?? 0}',
+            ),
+          ),
         ],
       ),
     );

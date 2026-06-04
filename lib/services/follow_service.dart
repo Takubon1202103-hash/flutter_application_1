@@ -33,22 +33,20 @@ class FollowService {
         .map((doc) => doc.exists);
   }
 
-  static Future<int> getFollowerCount(String uid) async {
-    final snap = await _firestore
+  static Stream<int> followerCountStream(String uid) {
+    return _firestore
         .collection('follows')
         .where('followingId', isEqualTo: uid)
-        .count()
-        .get();
-    return snap.count ?? 0;
+        .snapshots()
+        .map((s) => s.docs.length);
   }
 
-  static Future<int> getFollowingCount(String uid) async {
-    final snap = await _firestore
+  static Stream<int> followingCountStream(String uid) {
+    return _firestore
         .collection('follows')
         .where('followerId', isEqualTo: uid)
-        .count()
-        .get();
-    return snap.count ?? 0;
+        .snapshots()
+        .map((s) => s.docs.length);
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> getUsersStream() {
