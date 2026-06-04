@@ -431,14 +431,14 @@ class _VideoPageState extends State<_VideoPage> {
             bottom: 0,
             left: 0,
             right: 0,
-            height: 240,
+            height: 160,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
-                    Colors.black.withOpacity(0.8),
+                    Colors.black.withOpacity(0.85),
                     Colors.transparent,
                   ],
                 ),
@@ -448,9 +448,9 @@ class _VideoPageState extends State<_VideoPage> {
 
           // 左下: ユーザー情報
           Positioned(
-            bottom: 32,
-            left: 16,
-            right: 80,
+            bottom: 12,
+            left: 12,
+            right: 70,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -459,12 +459,12 @@ class _VideoPageState extends State<_VideoPage> {
                   children: [
                     widget.photoUrl != null
                         ? CircleAvatar(
-                            radius: 20,
+                            radius: 16,
                             backgroundImage:
                                 NetworkImage(widget.photoUrl!),
                           )
                         : CircleAvatar(
-                            radius: 20,
+                            radius: 16,
                             backgroundColor: Colors.red,
                             child: Text(
                               widget.username.isNotEmpty
@@ -472,10 +472,11 @@ class _VideoPageState extends State<_VideoPage> {
                                   : '?',
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10),
                             ),
                           ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,7 +485,7 @@ class _VideoPageState extends State<_VideoPage> {
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 15)),
+                                  fontSize: 13)),
                           Row(
                             children: [
                               Text(widget.timeAgo,
@@ -547,44 +548,27 @@ class _VideoPageState extends State<_VideoPage> {
                             TextStyle(color: Colors.red, fontSize: 11)),
                   ),
                 ],
-                if (widget.caption != null &&
-                    widget.caption!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.caption!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      height: 1.4,
-                      shadows: [
-                        Shadow(blurRadius: 8, color: Colors.black87)
-                      ],
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
 
           // 右側: リアクションボタン
           Positioned(
-            bottom: 32,
-            right: 12,
+            bottom: 20,
+            right: 8,
             child: Column(
               children: [
                 _SideButton(postId: widget.postId),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 _IconBtn(
                   icon: Icons.chat_bubble_outline,
-                  label: 'コメント',
+                  label: '',
                   onTap: () {},
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 _IconBtn(
                   icon: Icons.add_reaction_outlined,
-                  label: 'リアクション',
+                  label: '',
                   onTap: () {},
                 ),
               ],
@@ -659,15 +643,19 @@ class _IconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 32,
-              shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
-          const SizedBox(height: 4),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+          Icon(icon, color: color, size: 28,
+              shadows: const [Shadow(blurRadius: 6, color: Colors.black54)]),
+          if (label.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w500,
+                    shadows: const [Shadow(blurRadius: 4, color: Colors.black54)])),
+          ],
         ],
       ),
     );
