@@ -8,6 +8,7 @@ import '../services/like_service.dart';
 import '../services/shot_state.dart';
 import '../utils/video_filters.dart';
 import 'camera_screen.dart';
+import 'post_detail_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -242,9 +243,16 @@ class _TikTokFeedState extends State<_TikTokFeed> {
               .where('userId', whereIn: targetIds)
               .snapshots(),
           builder: (context, postsSnap) {
+            final now = DateTime.now();
+            final twoDaysAgo = now.subtract(const Duration(days: 2));
             final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[
               ...(postsSnap.data?.docs ?? [])
-            ]..sort((a, b) {
+            ]
+              ..retainWhere((d) {
+                final createdAt = (d.data()['createdAt'] as Timestamp?)?.toDate();
+                return createdAt != null && createdAt.isAfter(twoDaysAgo);
+              })
+              ..sort((a, b) {
                 final aT =
                     (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
                 final bT =
@@ -300,6 +308,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
 
                 return _VideoPage(
                   postId: docs[index].id,
+                  postData: data,
                   controller: _controllers[index],
                   username: data['username'] ?? 'ユーザー',
                   photoUrl: data['photoUrl'] as String?,
@@ -334,6 +343,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
 // ──────────────────────────────────────────────
 class _VideoPage extends StatefulWidget {
   final String postId;
+  final Map<String, dynamic> postData;
   final VideoPlayerController? controller;
   final String username;
   final String? photoUrl;
@@ -347,6 +357,7 @@ class _VideoPage extends StatefulWidget {
 
   const _VideoPage({
     required this.postId,
+    required this.postData,
     required this.controller,
     required this.username,
     required this.photoUrl,
@@ -548,7 +559,16 @@ class _VideoPageState extends State<_VideoPage> {
                 _SideButton(postId: widget.postId),
                 const SizedBox(height: 18),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PostDetailScreen(
+                          postId: widget.postId,
+                          postData: widget.postData,
+                        ),
+                      ),
+                    );
+                  },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -571,21 +591,6 @@ class _VideoPageState extends State<_VideoPage> {
                           shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
                       const SizedBox(height: 6),
                       const Text('シェア',
-                          style: TextStyle(color: Colors.white, fontSize: 10,
-                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                GestureDetector(
-                  onTap: () {},
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bookmark_outline, color: Colors.white, size: 30,
-                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
-                      const SizedBox(height: 6),
-                      const Text('保存',
                           style: TextStyle(color: Colors.white, fontSize: 10,
                               shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
                     ],
