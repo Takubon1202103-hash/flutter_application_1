@@ -55,10 +55,16 @@ class _VideoHistoryScreenState extends State<VideoHistoryScreen> {
         stream: FirebaseFirestore.instance
             .collection('posts')
             .where('userId', isEqualTo: user.uid)
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snap) {
-          final docs = snap.data?.docs ?? [];
+          var docs = snap.data?.docs ?? [];
+
+          // createdAt で降順ソート
+          docs.sort((a, b) {
+            final aTime = (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+            final bTime = (b.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+            return bTime.compareTo(aTime);
+          });
 
           if (docs.isEmpty) {
             return const Center(
