@@ -3,12 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 import '../services/like_service.dart';
-import '../services/post_service.dart';
 import '../services/shot_state.dart';
-import '../widgets/video_thumbnail_widget.dart';
 import 'camera_screen.dart';
-import 'video_view_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -22,93 +20,77 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const CameraScreen()),
     );
-    if (result == true && mounted) {
-      // ShotStateはcamera_screen側でmarkPosted済み
-      setState(() {});
-    }
-  }
-
-  Future<void> _startShotTimer() async {
-    await context.read<ShotState>().startShotTimer();
+    if (result == true && mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final shotState = context.watch<ShotState>();
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      appBar: _buildAppBar(shotState),
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            const Text('OneShot',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(width: 10),
+            if (shotState.shotTime != null && !shotState.hasPostedToday)
+              _ShotTimerBadge(shotTime: shotState.shotTime!),
+            if (shotState.hasPostedToday)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.green.withOpacity(0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 13),
+                    const SizedBox(width: 4),
+                    Text(
+                      shotState.isLate ? '遅れて投稿済み' : '投稿済み',
+                      style: TextStyle(
+                        color: shotState.isLate ? Colors.orange : Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          if (shotState.shotTime == null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () => context.read<ShotState>().startShotTimer(),
+                icon: const Icon(Icons.notifications_none, color: Colors.white),
+              ),
+            ),
+        ],
+      ),
       body: Stack(
         children: [
-          _buildTimeline(shotState),
-          // ロック画面: 未投稿の場合
+          _TikTokFeed(currentUid: currentUid, shotState: shotState),
           if (!shotState.hasPostedToday) _buildLockOverlay(),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ShotState shotState) {
-    final hasTimer = shotState.shotTime != null;
-
-    return AppBar(
-      backgroundColor: const Color(0xFF0A0A0A),
-      elevation: 0,
-      titleSpacing: 16,
-      actions: [
-        if (!hasTimer)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              onPressed: _startShotTimer,
-              icon: const Icon(Icons.notifications_none, color: Colors.white),
-              tooltip: '通知を受け取る',
-            ),
-          ),
-      ],
-      title: Row(
-        children: [
-          const Text(
-            'OneShot',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          if (hasTimer && !shotState.hasPostedToday) ...[
-            const SizedBox(width: 12),
-            _ShotTimerBadge(shotTime: shotState.shotTime!),
-          ],
-          if (shotState.hasPostedToday) ...[
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.green.withOpacity(0.5)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 13),
-                  const SizedBox(width: 4),
-                  Text(
-                    shotState.isLate ? '遅れて投稿済み' : '投稿済み',
-                    style: TextStyle(
-                      color: shotState.isLate ? Colors.orange : Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ロックオーバーレイ: 未投稿時にタイムライン全体に被せる
   Widget _buildLockOverlay() {
     return Positioned.fill(
       child: ClipRect(
@@ -128,24 +110,30 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   child: const Icon(Icons.lock, color: Colors.white, size: 48),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  '今日のOneShotを投稿すると、',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  '友達の投稿が表示されます',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                const Text('今日のOneShotを投稿すると、',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                const Text('友達の投稿が表示されます',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
                   onPressed: _openCamera,
                   icon: const Icon(Icons.videocam, size: 22),
-                  label: const Text('今すぐ撮影する', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: const Text('今すぐ撮影する',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32)),
                   ),
                 ),
               ],
@@ -155,24 +143,97 @@ class _TimelineScreenState extends State<TimelineScreen> {
       ),
     );
   }
+}
 
-  Widget _buildTimeline(ShotState shotState) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+// ──────────────────────────────────────────────
+// TikTok スタイルフィード
+// ──────────────────────────────────────────────
+class _TikTokFeed extends StatefulWidget {
+  final String currentUid;
+  final ShotState shotState;
 
-    // まずフォロー中ユーザーのIDリストを取得
+  const _TikTokFeed({required this.currentUid, required this.shotState});
+
+  @override
+  State<_TikTokFeed> createState() => _TikTokFeedState();
+}
+
+class _TikTokFeedState extends State<_TikTokFeed> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  final Map<int, VideoPlayerController> _controllers = {};
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _initController(
+      int index, List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+    if (index < 0 || index >= docs.length) return;
+    if (_controllers.containsKey(index)) return;
+
+    final videoUrl = docs[index].data()['videoUrl'] as String?;
+    if (videoUrl == null) return;
+
+    final controller =
+        VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    _controllers[index] = controller;
+
+    await controller.initialize();
+    controller.setLooping(true);
+
+    if (mounted && _currentPage == index) {
+      controller.play();
+      setState(() {});
+    }
+  }
+
+  void _onPageChanged(
+      int page, List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    // 前のページを停止
+    _controllers[_currentPage]?.pause();
+    _currentPage = page;
+
+    // 現在ページを再生
+    if (_controllers.containsKey(page)) {
+      _controllers[page]!.play();
+    } else {
+      _initController(page, docs);
+    }
+
+    // 次ページをプリロード
+    _initController(page + 1, docs);
+
+    // 古いコントローラを破棄（3ページ以上離れたもの）
+    final toRemove =
+        _controllers.keys.where((k) => (k - page).abs() > 2).toList();
+    for (final k in toRemove) {
+      _controllers[k]!.dispose();
+      _controllers.remove(k);
+    }
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('follows')
-          .where('followerId', isEqualTo: currentUserId)
+          .where('followerId', isEqualTo: widget.currentUid)
           .snapshots(),
       builder: (context, followsSnap) {
         final followingIds = followsSnap.data?.docs
                 .map((d) => d.data()['followingId'] as String)
                 .toList() ??
             [];
-
-        // 自分 + フォロー中ユーザーの投稿のみ表示
-        final targetIds = [currentUserId, ...followingIds].take(30).toList();
+        final targetIds =
+            [widget.currentUid, ...followingIds].take(30).toList();
 
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
@@ -180,53 +241,66 @@ class _TimelineScreenState extends State<TimelineScreen> {
               .where('userId', whereIn: targetIds)
               .snapshots(),
           builder: (context, postsSnap) {
-            if (postsSnap.connectionState == ConnectionState.waiting &&
-                followsSnap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.white));
-            }
-
             final docs = [...(postsSnap.data?.docs ?? [])]
               ..sort((a, b) {
-                final aTime = (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
-                final bTime = (b.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
-                return bTime.compareTo(aTime);
+                final aT =
+                    (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+                final bT =
+                    (b.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+                return bT.compareTo(aT);
               });
 
             if (docs.isEmpty) {
-              return Center(
+              return const Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.people_outline, color: Color(0xFF333333), size: 56),
-                      const SizedBox(height: 16),
-                      const Text('友達を追加すると\nここに投稿が表示されます',
+                      Icon(Icons.people_outline,
+                          color: Color(0xFF333333), size: 56),
+                      SizedBox(height: 16),
+                      Text('友達を追加すると\nここに投稿が表示されます',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF666666), fontSize: 14, height: 1.6)),
+                          style: TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 14,
+                              height: 1.6)),
                     ],
                   ),
                 ),
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+            // 初回ロード時に最初のページを初期化
+            if (_controllers.isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _initController(0, docs);
+                _initController(1, docs);
+              });
+            }
+
+            return PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              onPageChanged: (p) => _onPageChanged(p, docs),
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final data = docs[index].data();
-                final isOwn = data['userId'] == currentUserId;
-                final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-                final postedAt = (data['postedAt'] as Timestamp?)?.toDate() ?? createdAt;
+                final isOwn = data['userId'] == widget.currentUid;
+                final createdAt =
+                    (data['createdAt'] as Timestamp?)?.toDate();
+                final postedAt =
+                    (data['postedAt'] as Timestamp?)?.toDate() ?? createdAt;
                 final isLate = data['isLate'] as bool? ?? false;
-                final lateLabel = isLate ? shotState.lateLabel(postedAt) : '';
+                final lateLabel =
+                    isLate ? widget.shotState.lateLabel(postedAt) : '';
 
-                return _PostCard(
+                return _VideoPage(
                   postId: docs[index].id,
+                  controller: _controllers[index],
                   username: data['username'] ?? 'ユーザー',
                   photoUrl: data['photoUrl'] as String?,
-                  videoUrl: data['videoUrl'] as String?,
-                  thumbnailUrl: data['thumbnailUrl'] as String?,
                   timeAgo: _formatTimeAgo(createdAt),
                   isOwn: isOwn,
                   isLate: isLate,
@@ -250,7 +324,305 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 }
 
-// ショットタイマーバッジ（リアルタイムカウントダウン）
+// ──────────────────────────────────────────────
+// 1ページ = 1動画（全画面）
+// ──────────────────────────────────────────────
+class _VideoPage extends StatefulWidget {
+  final String postId;
+  final VideoPlayerController? controller;
+  final String username;
+  final String? photoUrl;
+  final String timeAgo;
+  final bool isOwn;
+  final bool isLate;
+  final String lateLabel;
+
+  const _VideoPage({
+    required this.postId,
+    required this.controller,
+    required this.username,
+    required this.photoUrl,
+    required this.timeAgo,
+    required this.isOwn,
+    required this.isLate,
+    required this.lateLabel,
+  });
+
+  @override
+  State<_VideoPage> createState() => _VideoPageState();
+}
+
+class _VideoPageState extends State<_VideoPage> {
+  bool _showPauseIcon = false;
+
+  void _togglePlay() {
+    final c = widget.controller;
+    if (c == null) return;
+    setState(() {
+      if (c.value.isPlaying) {
+        c.pause();
+        _showPauseIcon = true;
+      } else {
+        c.play();
+        _showPauseIcon = false;
+      }
+    });
+    if (_showPauseIcon) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) setState(() => _showPauseIcon = false);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+
+    return GestureDetector(
+      onTap: _togglePlay,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 動画
+          Container(color: Colors.black),
+          if (controller != null && controller.value.isInitialized)
+            Center(
+              child: AspectRatio(
+                aspectRatio: controller.value.aspectRatio,
+                child: VideoPlayer(controller),
+              ),
+            )
+          else
+            const Center(
+              child: CircularProgressIndicator(color: Colors.white38),
+            ),
+
+          // 一時停止アイコン
+          if (_showPauseIcon)
+            const Center(
+              child: Icon(Icons.pause_circle_filled,
+                  color: Colors.white54, size: 80),
+            ),
+
+          // 下部グラデーション
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 240,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.8),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 左下: ユーザー情報
+          Positioned(
+            bottom: 32,
+            left: 16,
+            right: 80,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    widget.photoUrl != null
+                        ? CircleAvatar(
+                            radius: 20,
+                            backgroundImage:
+                                NetworkImage(widget.photoUrl!),
+                          )
+                        : CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.red,
+                            child: Text(
+                              widget.username.isNotEmpty
+                                  ? widget.username[0]
+                                  : '?',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.username,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15)),
+                          Row(
+                            children: [
+                              Text(widget.timeAgo,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12)),
+                              if (widget.isLate &&
+                                  widget.lateLabel.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color:
+                                            Colors.orange.withOpacity(0.5)),
+                                  ),
+                                  child: Text(widget.lateLabel,
+                                      style: const TextStyle(
+                                          color: Colors.orange,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.isOwn) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border:
+                          Border.all(color: Colors.red.withOpacity(0.5)),
+                    ),
+                    child: const Text('あなたの投稿',
+                        style:
+                            TextStyle(color: Colors.red, fontSize: 11)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // 右側: リアクションボタン
+          Positioned(
+            bottom: 32,
+            right: 12,
+            child: Column(
+              children: [
+                _SideButton(postId: widget.postId),
+                const SizedBox(height: 20),
+                _IconBtn(
+                  icon: Icons.chat_bubble_outline,
+                  label: 'コメント',
+                  onTap: () {},
+                ),
+                const SizedBox(height: 20),
+                _IconBtn(
+                  icon: Icons.add_reaction_outlined,
+                  label: 'リアクション',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+
+          // プログレスバー
+          if (controller != null && controller.value.isInitialized)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.white,
+                  bufferedColor: Colors.white24,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// いいねボタン（Firestore連動）
+class _SideButton extends StatelessWidget {
+  final String postId;
+  const _SideButton({required this.postId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: LikeService.isLiked(postId),
+      builder: (context, likedSnap) {
+        final liked = likedSnap.data ?? false;
+        return StreamBuilder<int>(
+          stream: LikeService.likeCount(postId),
+          builder: (context, countSnap) {
+            final count = countSnap.data ?? 0;
+            return _IconBtn(
+              icon: liked ? Icons.favorite : Icons.favorite_border,
+              label: count > 0 ? '$count' : 'いいね',
+              color: liked ? Colors.red : Colors.white,
+              onTap: () => LikeService.toggleLike(postId),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _IconBtn({
+    required this.icon,
+    required this.label,
+    this.color = Colors.white,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+        ],
+      ),
+    );
+  }
+}
+
+// タイマーバッジ
 class _ShotTimerBadge extends StatefulWidget {
   final DateTime shotTime;
   const _ShotTimerBadge({required this.shotTime});
@@ -260,8 +632,8 @@ class _ShotTimerBadge extends StatefulWidget {
 }
 
 class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
-  late final _timer = Stream.periodic(const Duration(seconds: 1));
-  late final _sub = _timer.listen((_) { if (mounted) setState(() {}); });
+  late final _sub = Stream.periodic(const Duration(seconds: 1))
+      .listen((_) { if (mounted) setState(() {}); });
 
   @override
   void dispose() {
@@ -272,9 +644,10 @@ class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
   @override
   Widget build(BuildContext context) {
     final elapsed = DateTime.now().difference(widget.shotTime);
-    final remaining = ShotState.lateThresholdMinutes * 60 - elapsed.inSeconds;
-    final isUrgent = remaining > 0 && remaining < 30;
+    final remaining =
+        ShotState.lateThresholdMinutes * 60 - elapsed.inSeconds;
     final isLate = remaining <= 0;
+    final isUrgent = remaining > 0 && remaining < 30;
 
     if (isLate) {
       return Container(
@@ -283,7 +656,11 @@ class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
           color: Colors.orange.withOpacity(0.2),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text('遅刻中', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+        child: const Text('遅刻中',
+            style: TextStyle(
+                color: Colors.orange,
+                fontSize: 12,
+                fontWeight: FontWeight.bold)),
       );
     }
 
@@ -293,233 +670,21 @@ class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isUrgent ? Colors.red : const Color(0xFF2A2A2A),
+        color: isUrgent ? Colors.red : Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.timer, color: isUrgent ? Colors.white : const Color(0xFFAAAAAA), size: 13),
+          Icon(Icons.timer,
+              color: isUrgent ? Colors.white : Colors.white70, size: 13),
           const SizedBox(width: 4),
-          Text('$m:$s', style: TextStyle(
-            color: isUrgent ? Colors.white : const Color(0xFFCCCCCC),
-            fontSize: 14, fontWeight: FontWeight.bold,
-          )),
+          Text('$m:$s',
+              style: TextStyle(
+                  color: isUrgent ? Colors.white : Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold)),
         ],
-      ),
-    );
-  }
-}
-
-class _PostCard extends StatelessWidget {
-  final String postId;
-  final String username;
-  final String? photoUrl;
-  final String? videoUrl;
-  final String? thumbnailUrl;
-  final String timeAgo;
-  final bool isOwn;
-  final bool isLate;
-  final String lateLabel;
-
-  const _PostCard({
-    required this.postId,
-    required this.username,
-    required this.photoUrl,
-    required this.videoUrl,
-    required this.thumbnailUrl,
-    required this.timeAgo,
-    required this.isOwn,
-    required this.isLate,
-    required this.lateLabel,
-  });
-
-  void _openVideo(BuildContext context) {
-    if (videoUrl == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => VideoViewScreen(videoUrl: videoUrl!, username: username),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          _buildVideoArea(context),
-          _buildReactions(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      child: Row(
-        children: [
-          photoUrl != null
-              ? CircleAvatar(radius: 18, backgroundImage: NetworkImage(photoUrl!))
-              : CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.red,
-                  child: Text(username.isNotEmpty ? username[0] : '?',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(username,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                Row(
-                  children: [
-                    Text(timeAgo, style: const TextStyle(color: Color(0xFF666666), fontSize: 12)),
-                    if (isLate && lateLabel.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.withOpacity(0.4)),
-                        ),
-                        child: Text(lateLabel,
-                            style: const TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (isOwn)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.withOpacity(0.4)),
-              ),
-              child: const Text('あなた', style: TextStyle(color: Colors.red, fontSize: 11)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReactions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Row(
-        children: [
-          // いいね
-          StreamBuilder<bool>(
-            stream: LikeService.isLiked(postId),
-            builder: (context, likedSnap) {
-              final liked = likedSnap.data ?? false;
-              return StreamBuilder<int>(
-                stream: LikeService.likeCount(postId),
-                builder: (context, countSnap) {
-                  final count = countSnap.data ?? 0;
-                  return _ReactionBtn(
-                    icon: liked ? Icons.favorite : Icons.favorite_border,
-                    color: liked ? Colors.red : const Color(0xFF888888),
-                    label: count > 0 ? '$count' : '',
-                    onTap: () => LikeService.toggleLike(postId),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(width: 4),
-          // 絵文字リアクション
-          _ReactionBtn(
-            icon: Icons.add_reaction_outlined,
-            color: const Color(0xFF888888),
-            label: '',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('リアクション機能は近日実装予定です'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
-          const Spacer(),
-          // コメント
-          _ReactionBtn(
-            icon: Icons.chat_bubble_outline,
-            color: const Color(0xFF888888),
-            label: 'コメント',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('コメント機能は近日実装予定です'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVideoArea(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _openVideo(context),
-      child: AspectRatio(
-        aspectRatio: 9 / 16,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            VideoThumbnailWidget(thumbnailUrl: thumbnailUrl, videoUrl: videoUrl),
-            const Center(
-              child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReactionBtn extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ReactionBtn({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 22),
-            if (label.isNotEmpty) ...[
-              const SizedBox(width: 4),
-              Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500)),
-            ],
-          ],
-        ),
       ),
     );
   }
