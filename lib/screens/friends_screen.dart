@@ -2,9 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/follow_service.dart';
+import 'my_qr_screen.dart';
+import 'qr_scanner_screen.dart';
 
-class FriendsScreen extends StatelessWidget {
+class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
+
+  @override
+  State<FriendsScreen> createState() => _FriendsScreenState();
+}
+
+class _FriendsScreenState extends State<FriendsScreen> {
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -19,38 +28,74 @@ class FriendsScreen extends StatelessWidget {
           '友達',
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code, color: Colors.white),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MyQrScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+            ),
+          ),
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FollowService.getUsersStream(),
-        builder: (context, snapshot) {
-          final docs = snapshot.data?.docs ?? [];
-          final others = docs.where((d) => d.id != currentUid).toList();
-
-          if (others.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.people_outline, color: Color(0xFF444444), size: 56),
-                  SizedBox(height: 16),
-                  Text('まだユーザーがいません', style: TextStyle(color: Color(0xFF666666))),
-                ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              onChanged: (v) => setState(() => _query = v.toLowerCase()),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'ユーザー名で検索',
+                hintStyle: const TextStyle(color: Color(0xFF555555)),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF555555)),
+                filled: true,
+                fillColor: const Color(0xFF1A1A1A),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
-            );
-          }
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FollowService.getUsersStream(),
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                final filtered = docs.where((d) {
+                  if (d.id == currentUid) return false;
+                  if (_query.isEmpty) return true;
+                  final name = (d.data()['displayName'] as String? ?? '').toLowerCase();
+                  return name.contains(_query);
+                }).toList();
 
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: others.length,
-            separatorBuilder: (_, __) =>
-                const Divider(color: Color(0xFF1E1E1E), height: 1),
-            itemBuilder: (context, index) {
-              final data = others[index].data();
-              final uid = others[index].id;
-              return _UserTile(uid: uid, data: data);
-            },
-          );
-        },
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Text('ユーザーが見つかりません', style: TextStyle(color: Color(0xFF666666))),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: Color(0xFF1E1E1E), height: 1),
+                  itemBuilder: (context, index) {
+                    final data = filtered[index].data();
+                    final uid = filtered[index].id;
+                    return _UserTile(uid: uid, data: data);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
