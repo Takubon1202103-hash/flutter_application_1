@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/follow_service.dart';
 import '../widgets/video_thumbnail_widget.dart';
 import 'follow_list_screen.dart';
+import 'post_detail_screen.dart';
 import 'video_view_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -183,12 +184,11 @@ class _MyPosts extends StatelessWidget {
             final thumbnailUrl = data['thumbnailUrl'] as String?;
             return GestureDetector(
               onTap: () {
-                if (videoUrl == null) return;
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => VideoViewScreen(
-                      videoUrl: videoUrl,
-                      username: data['username'] ?? 'ユーザー',
+                    builder: (_) => PostDetailScreen(
+                      postId: docs[index].id,
+                      postData: data,
                     ),
                   ),
                 );
