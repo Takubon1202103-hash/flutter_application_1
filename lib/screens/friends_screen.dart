@@ -12,22 +12,33 @@ class FriendsScreen extends StatefulWidget {
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen> {
-  String _query = '';
+class _FriendsScreenState extends State<FriendsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
-        title: const Text(
-          '友達',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('友達',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code, color: Colors.white),
@@ -35,118 +46,200 @@ class _FriendsScreenState extends State<FriendsScreen> {
               MaterialPageRoute(builder: (_) => const MyQrScreen()),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              onChanged: (v) => setState(() => _query = v.toLowerCase()),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'ユーザー名で検索',
-                hintStyle: const TextStyle(color: Color(0xFF555555)),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF555555)),
-                filled: true,
-                fillColor: const Color(0xFF1A1A1A),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
               ),
             ),
           ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FollowService.getUsersStream(),
-              builder: (context, snapshot) {
-                final docs = snapshot.data?.docs ?? [];
-                final others = docs.where((d) => d.id != currentUid).toList();
-
-                // 検索ワード未入力の初期状態
-                if (_query.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search, color: Color(0xFF444444), size: 48),
-                          SizedBox(height: 16),
-                          Text(
-                            'ユーザー名を入力して\n友達を検索してください',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFF666666), fontSize: 14, height: 1.6),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final filtered = others.where((d) {
-                  final name = (d.data()['displayName'] as String? ?? '').toLowerCase();
-                  return name.contains(_query);
-                }).toList();
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Text('「$_query」に一致するユーザーが見つかりません',
-                        style: const TextStyle(color: Color(0xFF666666))),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(color: Color(0xFF1E1E1E), height: 1),
-                  itemBuilder: (context, index) {
-                    final data = filtered[index].data();
-                    final uid = filtered[index].id;
-                    return _UserTile(uid: uid, data: data);
-                  },
-                );
-              },
-            ),
-          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 2,
+          labelColor: Colors.white,
+          unselectedLabelColor: const Color(0xFF555555),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          tabs: const [
+            Tab(text: 'フォロワー'),
+            Tab(text: 'フォロー中'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _FollowList(uid: uid, isFollowers: true),
+          _FollowList(uid: uid, isFollowers: false),
         ],
       ),
     );
   }
 }
 
-class _UserTile extends StatelessWidget {
+class _FollowList extends StatefulWidget {
   final String uid;
-  final Map<String, dynamic> data;
+  final bool isFollowers;
 
-  const _UserTile({required this.uid, required this.data});
+  const _FollowList({required this.uid, required this.isFollowers});
+
+  @override
+  State<_FollowList> createState() => _FollowListState();
+}
+
+class _FollowListState extends State<_FollowList>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
-    final photoUrl = data['photoUrl'] as String?;
-    final name = data['displayName'] as String? ?? 'ユーザー';
+    super.build(context);
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-        backgroundColor: Colors.red,
-        child: photoUrl == null
-            ? Text(name[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
-            : null,
-      ),
-      title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-      trailing: _FollowButton(targetUid: uid),
+    final stream = widget.isFollowers
+        ? FirebaseFirestore.instance
+            .collection('follows')
+            .where('followingId', isEqualTo: widget.uid)
+            .snapshots()
+        : FirebaseFirestore.instance
+            .collection('follows')
+            .where('followerId', isEqualTo: widget.uid)
+            .snapshots();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: TextField(
+            onChanged: (v) => setState(() => _query = v.toLowerCase()),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'ユーザー名で検索',
+              hintStyle: const TextStyle(color: Color(0xFF555555)),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF555555)),
+              filled: true,
+              fillColor: const Color(0xFF1A1A1A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: stream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+
+              final docs = snapshot.data?.docs ?? [];
+
+              if (docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.people_outline,
+                          color: Color(0xFF333333), size: 56),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.isFollowers
+                            ? 'まだフォロワーがいません'
+                            : 'まだフォローしていません',
+                        style: const TextStyle(
+                            color: Color(0xFF666666), fontSize: 14),
+                      ),
+                      if (!widget.isFollowers) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'QRコードで友達を追加しよう',
+                          style: TextStyle(
+                              color: Color(0xFF444444), fontSize: 12),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
+
+              final userIds = docs.map((d) {
+                return widget.isFollowers
+                    ? d.data()['followerId'] as String
+                    : d.data()['followingId'] as String;
+              }).toList();
+
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: userIds.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(color: Color(0xFF1E1E1E), height: 1),
+                itemBuilder: (context, index) =>
+                    _UserTile(uid: userIds[index], query: _query),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UserTile extends StatelessWidget {
+  final String uid;
+  final String query;
+
+  const _UserTile({required this.uid, required this.query});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const ListTile(
+            leading: CircleAvatar(backgroundColor: Color(0xFF1A1A1A)),
+            title: Text('...', style: TextStyle(color: Colors.white)),
+          );
+        }
+
+        final data = snapshot.data!.data() ?? {};
+        final name = data['displayName'] as String? ?? 'ユーザー';
+        final photoUrl = data['photoUrl'] as String?;
+
+        // 検索フィルター
+        if (query.isNotEmpty && !name.toLowerCase().contains(query)) {
+          return const SizedBox.shrink();
+        }
+
+        return ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          leading: CircleAvatar(
+            radius: 24,
+            backgroundImage:
+                photoUrl != null ? NetworkImage(photoUrl) : null,
+            backgroundColor: Colors.red,
+            child: photoUrl == null
+                ? Text(name[0].toUpperCase(),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold))
+                : null,
+          ),
+          title: Text(name,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
+          trailing: _FollowButton(targetUid: uid),
+        );
+      },
     );
   }
 }
@@ -161,7 +254,6 @@ class _FollowButton extends StatelessWidget {
       stream: FollowService.isFollowing(targetUid),
       builder: (context, snapshot) {
         final following = snapshot.data ?? false;
-
         return GestureDetector(
           onTap: () async {
             if (following) {
@@ -171,7 +263,8 @@ class _FollowButton extends StatelessWidget {
             }
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
               color: following ? const Color(0xFF2A2A2A) : Colors.white,
               borderRadius: BorderRadius.circular(20),
