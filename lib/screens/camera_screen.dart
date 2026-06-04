@@ -183,9 +183,16 @@ class _CameraScreenState extends State<CameraScreen>
             // カメラプレビュー（カメラロールは一切開かない）
             if (_isInitialized && _controller != null)
               Center(
-                child: AspectRatio(
-                  aspectRatio: _controller!.value.aspectRatio,
-                  child: CameraPreview(_controller!),
+                child: Builder(
+                  builder: (context) {
+                    final ar = _controller!.value.aspectRatio;
+                    // Android cameras return landscape ratio; invert for portrait
+                    final previewAr = ar > 1.0 ? 1.0 / ar : ar;
+                    return AspectRatio(
+                      aspectRatio: previewAr,
+                      child: CameraPreview(_controller!),
+                    );
+                  },
                 ),
               )
             else
