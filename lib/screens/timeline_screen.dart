@@ -309,6 +309,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
                 return _VideoPage(
                   postId: docs[index].id,
                   postData: data,
+                  userId: data['userId'] as String? ?? '',
                   controller: _controllers[index],
                   username: data['username'] ?? 'ユーザー',
                   photoUrl: data['photoUrl'] as String?,
@@ -344,6 +345,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
 class _VideoPage extends StatefulWidget {
   final String postId;
   final Map<String, dynamic> postData;
+  final String userId;
   final VideoPlayerController? controller;
   final String username;
   final String? photoUrl;
@@ -358,6 +360,7 @@ class _VideoPage extends StatefulWidget {
   const _VideoPage({
     required this.postId,
     required this.postData,
+    required this.userId,
     required this.controller,
     required this.username,
     required this.photoUrl,
@@ -492,13 +495,24 @@ class _VideoPageState extends State<_VideoPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.username,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
+                          StreamBuilder<DocumentSnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(widget.userId)
+                                .snapshots(),
+                            builder: (context, snap) {
+                              final displayName =
+                                  snap.data?.get('displayName') as String? ??
+                                      widget.username;
+                              return Text(displayName,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis);
+                            },
+                          ),
                           Row(
                             children: [
                               Text(widget.timeAgo,
