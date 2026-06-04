@@ -285,18 +285,23 @@ class _MyPosts extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('posts')
           .where('userId', isEqualTo: user.uid)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
           .orderBy('createdAt', descending: true)
-          .limit(1)
           .snapshots(),
       builder: (context, postsSnap) {
         if (postsSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final docs = postsSnap.data?.docs ?? [];
-        if (docs.isEmpty) {
+        final allDocs = postsSnap.data?.docs ?? [];
+
+        // 今日の投稿のみをフィルタリング
+        final todayDocs = allDocs.where((doc) {
+          final createdAt = (doc.data()['createdAt'] as Timestamp?)?.toDate();
+          if (createdAt == null) return false;
+          return createdAt.isAfter(startOfDay) && createdAt.isBefore(endOfDay.add(const Duration(days: 1)));
+        }).toList();
+
+        if (todayDocs.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
@@ -312,7 +317,7 @@ class _MyPosts extends StatelessWidget {
           );
         }
 
-        final data = docs[0].data();
+        final data = todayDocs[0].data();
         final videoUrl = data['videoUrl'] as String?;
         final thumbnailUrl = data['thumbnailUrl'] as String?;
 

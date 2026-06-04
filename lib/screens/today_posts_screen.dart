@@ -81,14 +81,17 @@ class _TodayPostsScreenState extends State<TodayPostsScreen> {
         stream: FirebaseFirestore.instance
             .collection('posts')
             .where('userId', isEqualTo: user.uid)
-            .where('createdAt',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-            .where('createdAt',
-                isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snap) {
-          final docs = snap.data?.docs ?? [];
+          final allDocs = snap.data?.docs ?? [];
+
+          // 今日の投稿のみをフィルタリング
+          final docs = allDocs.where((doc) {
+            final createdAt = (doc.data()['createdAt'] as Timestamp?)?.toDate();
+            if (createdAt == null) return false;
+            return createdAt.isAfter(startOfDay) && createdAt.isBefore(endOfDay.add(const Duration(days: 1)));
+          }).toList();
 
           if (docs.isEmpty) {
             return const Center(
