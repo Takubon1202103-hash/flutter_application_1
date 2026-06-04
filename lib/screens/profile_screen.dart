@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/follow_service.dart';
 import '../widgets/video_thumbnail_widget.dart';
+import 'follow_list_screen.dart';
 import 'video_view_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -92,18 +93,22 @@ class _StatsRow extends StatelessWidget {
           // フォロワー数
           StreamBuilder<int>(
             stream: FollowService.followerCountStream(uid),
-            builder: (_, snap) => _StatItem(
-              label: 'フォロワー',
-              value: '${snap.data ?? 0}',
+            builder: (context, snap) => GestureDetector(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => FollowListScreen(uid: uid, type: FollowListType.followers),
+              )),
+              child: _StatItem(label: 'フォロワー', value: '${snap.data ?? 0}'),
             ),
           ),
           Container(width: 0.5, height: 32, color: const Color(0xFF2A2A2A)),
           // フォロー中
           StreamBuilder<int>(
             stream: FollowService.followingCountStream(uid),
-            builder: (_, snap) => _StatItem(
-              label: 'フォロー中',
-              value: '${snap.data ?? 0}',
+            builder: (context, snap) => GestureDetector(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => FollowListScreen(uid: uid, type: FollowListType.following),
+              )),
+              child: _StatItem(label: 'フォロー中', value: '${snap.data ?? 0}'),
             ),
           ),
         ],
