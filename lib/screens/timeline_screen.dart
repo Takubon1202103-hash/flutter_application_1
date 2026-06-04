@@ -1,25 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/post_service.dart';
 import 'camera_screen.dart';
-
-class _PostData {
-  final String id;
-  final String username;
-  final Color avatarColor;
-  final Color videoColor;
-  final String timeAgo;
-  final bool isOwn;
-
-  const _PostData({
-    required this.id,
-    required this.username,
-    required this.avatarColor,
-    required this.videoColor,
-    required this.timeAgo,
-    this.isOwn = false,
-  });
-}
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -34,34 +19,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
   int _secondsRemaining = 600;
   Timer? _countdownTimer;
 
-  final List<_PostData> _posts = [
-    _PostData(
-      id: '1',
-      username: '龍馬',
-      avatarColor: Color(0xFF2979FF),
-      videoColor: Color(0xFF0D1B3E),
-      timeAgo: '2分前',
-    ),
-    _PostData(
-      id: '2',
-      username: '翔',
-      avatarColor: Color(0xFF00C853),
-      videoColor: Color(0xFF0A2B0A),
-      timeAgo: '5分前',
-    ),
-    _PostData(
-      id: '3',
-      username: '健人',
-      avatarColor: Color(0xFFFF6D00),
-      videoColor: Color(0xFF2B1200),
-      timeAgo: '8分前',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _checkIfPostedToday();
+  }
 
   @override
   void dispose() {
     _countdownTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _checkIfPostedToday() async {
+    final posted = await PostService.hasPostedToday();
+    if (mounted) setState(() => _hasPosted = posted);
   }
 
   void _startTimer() {
@@ -93,22 +65,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const CameraScreen()),
     );
-    if (result != null && mounted) {
+    if (result == true && mounted) {
       _countdownTimer?.cancel();
       setState(() {
         _hasPosted = true;
         _timerActive = false;
-        _posts.insert(
-          0,
-          const _PostData(
-            id: 'own',
-            username: 'あなた',
-            avatarColor: Colors.red,
-            videoColor: Color(0xFF2D0000),
-            timeAgo: 'たった今',
-            isOwn: true,
-          ),
-        );
       });
     }
   }
@@ -130,10 +91,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               backgroundColor: const Color(0xFF1A1A1A),
               foregroundColor: Colors.white,
               icon: const Icon(Icons.notifications, color: Colors.red, size: 20),
-              label: const Text(
-                '通知を受け取る',
-                style: TextStyle(fontSize: 13),
-              ),
+              label: const Text('通知を受け取る', style: TextStyle(fontSize: 13)),
             )
           : null,
     );
@@ -153,7 +111,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              letterSpacing: 2,
             ),
           ),
           if (_timerActive) ...[
@@ -213,7 +170,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 color: Colors.white,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
               ),
             ),
             SizedBox(width: 8),
@@ -225,23 +181,78 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildTimeline() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: _posts.length,
-      itemBuilder: (context, index) {
-        final post = _posts[index];
-        final locked = !_hasPosted && !post.isOwn;
-        return _PostCard(post: post, locked: locked);
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: PostService.postsStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text(
+              'まだ投稿がありません',
+              style: TextStyle(color: Color(0xFF666666)),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data();
+            final isOwn = data['userId'] == currentUserId;
+            final locked = !_hasPosted && !isOwn;
+            final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+            final timeAgo = _formatTimeAgo(createdAt);
+
+            return _PostCard(
+              username: data['username'] ?? 'ユーザー',
+              photoUrl: data['photoUrl'] as String?,
+              videoUrl: data['videoUrl'] as String?,
+              timeAgo: timeAgo,
+              isOwn: isOwn,
+              locked: locked,
+            );
+          },
+        );
       },
     );
+  }
+
+  String _formatTimeAgo(DateTime? dt) {
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'たった今';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}分前';
+    if (diff.inHours < 24) return '${diff.inHours}時間前';
+    return '${diff.inDays}日前';
   }
 }
 
 class _PostCard extends StatelessWidget {
-  final _PostData post;
+  final String username;
+  final String? photoUrl;
+  final String? videoUrl;
+  final String timeAgo;
+  final bool isOwn;
   final bool locked;
 
-  const _PostCard({required this.post, required this.locked});
+  const _PostCard({
+    required this.username,
+    required this.photoUrl,
+    required this.videoUrl,
+    required this.timeAgo,
+    required this.isOwn,
+    required this.locked,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -267,24 +278,29 @@ class _PostCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: post.avatarColor,
-            child: Text(
-              post.username[0],
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
+          photoUrl != null
+              ? CircleAvatar(
+                  radius: 18,
+                  backgroundImage: NetworkImage(photoUrl!),
+                )
+              : CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.red,
+                  child: Text(
+                    username.isNotEmpty ? username[0] : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                post.username,
+                username,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -292,15 +308,12 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
               Text(
-                post.timeAgo,
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 12,
-                ),
+                timeAgo,
+                style: const TextStyle(color: Color(0xFF666666), fontSize: 12),
               ),
             ],
           ),
-          if (post.isOwn) ...[
+          if (isOwn) ...[
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -327,36 +340,14 @@ class _PostCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  post.videoColor,
-                  post.videoColor.withOpacity(0.4),
-                ],
+            color: const Color(0xFF111111),
+            child: const Center(
+              child: Icon(
+                Icons.play_circle_outline,
+                color: Colors.white24,
+                size: 64,
               ),
             ),
-            child: post.isOwn
-                ? const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle_outline,
-                          color: Colors.white38, size: 52),
-                      SizedBox(height: 12),
-                      Text(
-                        '投稿済み',
-                        style: TextStyle(color: Colors.white38, fontSize: 14),
-                      ),
-                    ],
-                  )
-                : const Center(
-                    child: Icon(
-                      Icons.play_circle_outline,
-                      color: Colors.white12,
-                      size: 64,
-                    ),
-                  ),
           ),
           if (locked)
             ClipRect(
@@ -390,7 +381,7 @@ class _PostCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${post.username}の動画を見るには投稿しよう',
+                        '$usernameの動画を見るには投稿しよう',
                         style: const TextStyle(
                           color: Color(0xFFAAAAAA),
                           fontSize: 12,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../services/post_service.dart';
 
 const int kMaxRecordingSeconds = 60;
 
@@ -27,6 +28,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   XFile? _recordedVideo;
   VideoPlayerController? _previewController;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -152,6 +154,22 @@ class _CameraScreenState extends State<CameraScreen>
     });
     _selectedCameraIndex = (_selectedCameraIndex + 1) % _cameras.length;
     await _setupCamera(_cameras[_selectedCameraIndex]);
+  }
+
+  Future<void> _uploadAndPost() async {
+    if (_recordedVideo == null) return;
+    setState(() => _isUploading = true);
+    try {
+      await PostService.uploadPost(File(_recordedVideo!.path));
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('投稿に失敗しました: $e')),
+        );
+        setState(() => _isUploading = false);
+      }
+    }
   }
 
   Future<void> _retake() async {
@@ -385,14 +403,23 @@ class _CameraScreenState extends State<CameraScreen>
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text('投稿する'),
+                      icon: _isUploading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_isUploading ? 'アップロード中...' : '投稿する'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      onPressed: () => Navigator.of(context).pop(_recordedVideo),
+                      onPressed: _isUploading ? null : _uploadAndPost,
                     ),
                   ),
                 ],
