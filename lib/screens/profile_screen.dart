@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/follow_service.dart';
+import '../widgets/video_thumbnail_widget.dart';
 import 'video_view_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -195,10 +196,10 @@ class _MyPosts extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (thumbnailUrl != null)
-                    Image.network(thumbnailUrl, fit: BoxFit.cover)
-                  else
-                    Container(color: const Color(0xFF1A1A1A)),
+                  VideoThumbnailWidget(
+                    thumbnailUrl: thumbnailUrl,
+                    videoUrl: videoUrl,
+                  ),
                   const Center(
                     child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 32),
                   ),

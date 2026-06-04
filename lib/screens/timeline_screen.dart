@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import 'camera_screen.dart';
 import 'video_view_screen.dart';
+import '../widgets/video_thumbnail_widget.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -354,15 +355,10 @@ class _PostCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (thumbnailUrl != null)
-              Image.network(
-                thumbnailUrl!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-              )
-            else
-              Container(color: const Color(0xFF111111)),
+            VideoThumbnailWidget(
+              thumbnailUrl: thumbnailUrl,
+              videoUrl: videoUrl,
+            ),
             const Center(
               child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
             ),
