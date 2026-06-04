@@ -3,6 +3,7 @@ import 'timeline_screen.dart';
 import 'friends_screen.dart';
 import 'profile_screen.dart';
 import 'camera_screen.dart';
+import 'video_history_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -17,6 +18,7 @@ class _MainShellState extends State<MainShell> {
   static const _screens = [
     TimelineScreen(),
     FriendsScreen(),
+    VideoHistoryScreen(),
     ProfileScreen(),
   ];
 
@@ -83,6 +85,12 @@ class _BottomNavBar extends StatelessWidget {
                 selected: currentIndex == 1,
                 onTap: () => onTap(1),
               ),
+              _NavItem(
+                icon: Icons.image_outlined,
+                label: '写真',
+                selected: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
               // Center camera button
               Expanded(
                 child: GestureDetector(
@@ -115,8 +123,8 @@ class _BottomNavBar extends StatelessWidget {
               _NavItem(
                 icon: Icons.person_outline,
                 label: 'マイページ',
-                selected: currentIndex == 2,
-                onTap: () => onTap(2),
+                selected: currentIndex == 3,
+                onTap: () => onTap(3),
               ),
             ],
           ),
