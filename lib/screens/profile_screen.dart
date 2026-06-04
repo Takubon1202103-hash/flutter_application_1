@@ -143,10 +143,14 @@ class _MyPosts extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('posts')
           .where('userId', isEqualTo: uid)
-          .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
-        final docs = snapshot.data?.docs ?? [];
+        final docs = [...(snapshot.data?.docs ?? [])]
+          ..sort((a, b) {
+            final aTime = (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+            final bTime = (b.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+            return bTime.compareTo(aTime);
+          });
 
         if (docs.isEmpty) {
           return const Padding(
