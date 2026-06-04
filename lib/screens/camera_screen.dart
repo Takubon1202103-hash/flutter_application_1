@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../services/location_service.dart';
 import '../services/post_service.dart';
 import '../services/shot_state.dart';
 
@@ -180,11 +181,13 @@ class _CameraScreenState extends State<CameraScreen>
     try {
       final shotState = context.read<ShotState>();
       final isLate = shotState.calculateIsLate(DateTime.now());
+      final locationName = await LocationService.getCurrentLocationName();
 
       await PostService.uploadPost(
         File(_recordedVideo!.path),
         isLate: isLate,
         frontVideoFile: _frontVideo != null ? File(_frontVideo!.path) : null,
+        locationName: locationName,
       );
 
       if (mounted) {

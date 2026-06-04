@@ -6,6 +6,8 @@
 	<string>このアプリは動画の撮影とQRコードのスキャンにカメラを使用します。</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>このアプリは動画に音声を録音するためにマイクを使用します。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>投稿に撮影場所を追加するために位置情報を使用します。</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

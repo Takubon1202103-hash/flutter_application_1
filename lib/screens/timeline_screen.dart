@@ -303,6 +303,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
                   username: data['username'] ?? 'ユーザー',
                   photoUrl: data['photoUrl'] as String?,
                   timeAgo: _formatTimeAgo(createdAt),
+                  locationName: data['locationName'] as String?,
                   isOwn: isOwn,
                   isLate: isLate,
                   lateLabel: lateLabel,
@@ -334,6 +335,7 @@ class _VideoPage extends StatefulWidget {
   final String username;
   final String? photoUrl;
   final String timeAgo;
+  final String? locationName;
   final bool isOwn;
   final bool isLate;
   final String lateLabel;
@@ -344,6 +346,7 @@ class _VideoPage extends StatefulWidget {
     required this.username,
     required this.photoUrl,
     required this.timeAgo,
+    required this.locationName,
     required this.isOwn,
     required this.isLate,
     required this.lateLabel,
@@ -470,6 +473,19 @@ class _VideoPageState extends State<_VideoPage> {
                                   style: const TextStyle(
                                       color: Colors.white70,
                                       fontSize: 12)),
+                              if (widget.locationName != null) ...[
+                                const Text(' · ',
+                                    style: TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 12)),
+                                const Icon(Icons.location_on,
+                                    color: Colors.white54, size: 11),
+                                const SizedBox(width: 2),
+                                Text(widget.locationName!,
+                                    style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12)),
+                              ],
                               if (widget.isLate &&
                                   widget.lateLabel.isNotEmpty) ...[
                                 const SizedBox(width: 6),
