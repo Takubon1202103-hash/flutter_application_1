@@ -446,9 +446,9 @@ class _VideoPageState extends State<_VideoPage> {
             ),
           ),
 
-          // 左下: ユーザー情報
+          // 左下: ユーザー情報（Instagramスタイル）
           Positioned(
-            bottom: 12,
+            bottom: 16,
             left: 12,
             right: 70,
             child: Column(
@@ -459,12 +459,12 @@ class _VideoPageState extends State<_VideoPage> {
                   children: [
                     widget.photoUrl != null
                         ? CircleAvatar(
-                            radius: 16,
+                            radius: 18,
                             backgroundImage:
                                 NetworkImage(widget.photoUrl!),
                           )
                         : CircleAvatar(
-                            radius: 16,
+                            radius: 18,
                             backgroundColor: Colors.red,
                             child: Text(
                               widget.username.isNotEmpty
@@ -473,10 +473,10 @@ class _VideoPageState extends State<_VideoPage> {
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 10),
+                                  fontSize: 11),
                             ),
                           ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,44 +485,30 @@ class _VideoPageState extends State<_VideoPage> {
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13)),
+                                  fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                           Row(
                             children: [
                               Text(widget.timeAgo,
                                   style: const TextStyle(
                                       color: Colors.white70,
-                                      fontSize: 12)),
+                                      fontSize: 11)),
                               if (widget.locationName != null) ...[
                                 const Text(' · ',
                                     style: TextStyle(
                                         color: Colors.white38,
-                                        fontSize: 12)),
+                                        fontSize: 11)),
                                 const Icon(Icons.location_on,
-                                    color: Colors.white54, size: 11),
+                                    color: Colors.white54, size: 10),
                                 const SizedBox(width: 2),
-                                Text(widget.locationName!,
-                                    style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12)),
-                              ],
-                              if (widget.isLate &&
-                                  widget.lateLabel.isNotEmpty) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color:
-                                            Colors.orange.withOpacity(0.5)),
-                                  ),
-                                  child: Text(widget.lateLabel,
+                                Expanded(
+                                  child: Text(widget.locationName!,
                                       style: const TextStyle(
-                                          color: Colors.orange,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold)),
+                                          color: Colors.white70,
+                                          fontSize: 11),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
                                 ),
                               ],
                             ],
@@ -532,44 +518,61 @@ class _VideoPageState extends State<_VideoPage> {
                     ),
                   ],
                 ),
-                if (widget.isOwn) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                      border:
-                          Border.all(color: Colors.red.withOpacity(0.5)),
-                    ),
-                    child: const Text('あなたの投稿',
-                        style:
-                            TextStyle(color: Colors.red, fontSize: 11)),
-                  ),
-                ],
               ],
             ),
           ),
 
-          // 右側: リアクションボタン
+          // 右側: リアクションボタン（Instagramスタイル）
           Positioned(
             bottom: 20,
-            right: 8,
+            right: 10,
             child: Column(
               children: [
                 _SideButton(postId: widget.postId),
-                const SizedBox(height: 14),
-                _IconBtn(
-                  icon: Icons.chat_bubble_outline,
-                  label: '',
+                const SizedBox(height: 18),
+                GestureDetector(
                   onTap: () {},
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, color: Colors.white, size: 30,
+                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+                      const SizedBox(height: 6),
+                      const Text('コメント',
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 14),
-                _IconBtn(
-                  icon: Icons.add_reaction_outlined,
-                  label: '',
+                const SizedBox(height: 18),
+                GestureDetector(
                   onTap: () {},
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.share_outlined, color: Colors.white, size: 30,
+                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+                      const SizedBox(height: 6),
+                      const Text('シェア',
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                GestureDetector(
+                  onTap: () {},
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bookmark_outline, color: Colors.white, size: 30,
+                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+                      const SizedBox(height: 6),
+                      const Text('保存',
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -597,7 +600,7 @@ class _VideoPageState extends State<_VideoPage> {
   }
 }
 
-// いいねボタン（Firestore連動）
+// いいねボタン（Firestore連動・Instagramスタイル）
 class _SideButton extends StatelessWidget {
   final String postId;
   const _SideButton({required this.postId});
@@ -612,11 +615,22 @@ class _SideButton extends StatelessWidget {
           stream: LikeService.likeCount(postId),
           builder: (context, countSnap) {
             final count = countSnap.data ?? 0;
-            return _IconBtn(
-              icon: liked ? Icons.favorite : Icons.favorite_border,
-              label: count > 0 ? '$count' : 'いいね',
-              color: liked ? Colors.red : Colors.white,
+            return GestureDetector(
               onTap: () => LikeService.toggleLike(postId),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(liked ? Icons.favorite : Icons.favorite_outline,
+                      color: liked ? Colors.red : Colors.white, size: 32,
+                      shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+                  const SizedBox(height: 6),
+                  Text('$count',
+                      style: TextStyle(
+                          color: liked ? Colors.red : Colors.white, fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          shadows: const [Shadow(blurRadius: 4, color: Colors.black54)])),
+                ],
+              ),
             );
           },
         );
