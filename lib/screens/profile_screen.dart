@@ -8,6 +8,7 @@ import '../widgets/video_thumbnail_widget.dart';
 import 'follow_list_screen.dart';
 import 'post_detail_screen.dart';
 import 'settings_screen.dart';
+import 'video_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -28,7 +29,9 @@ class ProfileScreen extends StatelessWidget {
             child: IconButton(
               icon: const Icon(Icons.notifications_outlined, color: Colors.white),
               onPressed: () {
-                // 通知画面への遷移（未実装）
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const VideoHistoryScreen()),
+                );
               },
             ),
           ),
