@@ -7,13 +7,18 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      vars:
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
     scripts:
       - name: Flutter pub get
         script: flutter pub get
       - name: Pod install
         script: cd ios && pod install
+      - name: List available schemes
+        script: xcodebuild -workspace ios/Runner.xcworkspace -list
       - name: Build unsigned IPA
-        script: flutter build ipa --no-codesign
+        script: flutter build ipa --release --no-codesign
     artifacts:
       - build/ios/ipa/*.ipa
       - flutter_drive.log
