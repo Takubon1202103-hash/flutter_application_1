@@ -157,44 +157,82 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildTimeline(ShotState shotState) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
+    // まずフォロー中ユーザーのIDリストを取得
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: PostService.postsStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
-        }
+      stream: FirebaseFirestore.instance
+          .collection('follows')
+          .where('followerId', isEqualTo: currentUserId)
+          .snapshots(),
+      builder: (context, followsSnap) {
+        final followingIds = followsSnap.data?.docs
+                .map((d) => d.data()['followingId'] as String)
+                .toList() ??
+            [];
 
-        final docs = snapshot.data?.docs ?? [];
+        // 自分 + フォロー中ユーザーの投稿のみ表示
+        final targetIds = [currentUserId, ...followingIds].take(30).toList();
 
-        if (docs.isEmpty) {
-          return const Center(
-            child: Text('まだ投稿がありません', style: TextStyle(color: Color(0xFF666666))),
-          );
-        }
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('posts')
+              .where('userId', whereIn: targetIds)
+              .snapshots(),
+          builder: (context, postsSnap) {
+            if (postsSnap.connectionState == ConnectionState.waiting &&
+                followsSnap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.white));
+            }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data();
-            final isOwn = data['userId'] == currentUserId;
-            final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-            final postedAt = (data['postedAt'] as Timestamp?)?.toDate() ?? createdAt;
-            final isLate = data['isLate'] as bool? ?? false;
-            final lateLabel = isLate ? shotState.lateLabel(postedAt) : '';
+            final docs = [...(postsSnap.data?.docs ?? [])]
+              ..sort((a, b) {
+                final aTime = (a.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+                final bTime = (b.data()['createdAt'] as Timestamp?)?.seconds ?? 0;
+                return bTime.compareTo(aTime);
+              });
 
-            return _PostCard(
-              postId: docs[index].id,
-              username: data['username'] ?? 'ユーザー',
-              photoUrl: data['photoUrl'] as String?,
-              videoUrl: data['videoUrl'] as String?,
-              thumbnailUrl: data['thumbnailUrl'] as String?,
-              timeAgo: _formatTimeAgo(createdAt),
-              isOwn: isOwn,
-              isLate: isLate,
-              lateLabel: lateLabel,
+            if (docs.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.people_outline, color: Color(0xFF333333), size: 56),
+                      const SizedBox(height: 16),
+                      const Text('友達を追加すると\nここに投稿が表示されます',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF666666), fontSize: 14, height: 1.6)),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                final data = docs[index].data();
+                final isOwn = data['userId'] == currentUserId;
+                final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                final postedAt = (data['postedAt'] as Timestamp?)?.toDate() ?? createdAt;
+                final isLate = data['isLate'] as bool? ?? false;
+                final lateLabel = isLate ? shotState.lateLabel(postedAt) : '';
+
+                return _PostCard(
+                  postId: docs[index].id,
+                  username: data['username'] ?? 'ユーザー',
+                  photoUrl: data['photoUrl'] as String?,
+                  videoUrl: data['videoUrl'] as String?,
+                  thumbnailUrl: data['thumbnailUrl'] as String?,
+                  timeAgo: _formatTimeAgo(createdAt),
+                  isOwn: isOwn,
+                  isLate: isLate,
+                  lateLabel: lateLabel,
+                );
+              },
             );
           },
         );
