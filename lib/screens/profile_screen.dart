@@ -45,9 +45,9 @@ class ProfileScreen extends StatelessWidget {
                 // グラスモフィズム効果（BackdropFilter）
                 Positioned.fill(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                     child: Container(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withOpacity(0.3),
                     ),
                   ),
                 ),
