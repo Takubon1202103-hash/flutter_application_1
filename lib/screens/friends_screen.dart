@@ -68,16 +68,38 @@ class _FriendsScreenState extends State<FriendsScreen> {
               stream: FollowService.getUsersStream(),
               builder: (context, snapshot) {
                 final docs = snapshot.data?.docs ?? [];
-                final filtered = docs.where((d) {
-                  if (d.id == currentUid) return false;
-                  if (_query.isEmpty) return true;
+                final others = docs.where((d) => d.id != currentUid).toList();
+
+                // 検索ワード未入力の初期状態
+                if (_query.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search, color: Color(0xFF444444), size: 48),
+                          SizedBox(height: 16),
+                          Text(
+                            'ユーザー名を入力して\n友達を検索してください',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFF666666), fontSize: 14, height: 1.6),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final filtered = others.where((d) {
                   final name = (d.data()['displayName'] as String? ?? '').toLowerCase();
                   return name.contains(_query);
                 }).toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(
-                    child: Text('ユーザーが見つかりません', style: TextStyle(color: Color(0xFF666666))),
+                  return Center(
+                    child: Text('「$_query」に一致するユーザーが見つかりません',
+                        style: const TextStyle(color: Color(0xFF666666))),
                   );
                 }
 

@@ -28,15 +28,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
+              const Spacer(flex: 3),
               const Text(
                 'OneShot',
                 style: TextStyle(
@@ -50,11 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 '1日1回、その瞬間を撮れ。',
                 style: TextStyle(color: Color(0xFF888888), fontSize: 16),
               ),
-              const Spacer(),
+              const Spacer(flex: 4),
               _loading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : _GoogleSignInButton(onTap: _signIn),
-              const SizedBox(height: 48),
+              SizedBox(height: 24 + bottomPadding),
             ],
           ),
         ),
@@ -65,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class _GoogleSignInButton extends StatelessWidget {
   final VoidCallback onTap;
-
   const _GoogleSignInButton({required this.onTap});
 
   @override
@@ -86,11 +87,7 @@ class _GoogleSignInButton extends StatelessWidget {
             SizedBox(width: 10),
             Text(
               'Googleでサインイン',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ],
         ),

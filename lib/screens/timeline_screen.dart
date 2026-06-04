@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/like_service.dart';
 import '../services/post_service.dart';
 import '../services/shot_state.dart';
 import '../widgets/video_thumbnail_widget.dart';
@@ -45,15 +46,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
           if (!shotState.hasPostedToday) _buildLockOverlay(),
         ],
       ),
-      floatingActionButton: shotState.shotTime == null
-          ? FloatingActionButton.extended(
-              onPressed: _startShotTimer,
-              backgroundColor: const Color(0xFF1A1A1A),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.notifications, color: Colors.red, size: 20),
-              label: const Text('通知を受け取る', style: TextStyle(fontSize: 13)),
-            )
-          : null,
     );
   }
 
@@ -64,6 +56,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
       backgroundColor: const Color(0xFF0A0A0A),
       elevation: 0,
       titleSpacing: 16,
+      actions: [
+        if (!hasTimer)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              onPressed: _startShotTimer,
+              icon: const Icon(Icons.notifications_none, color: Colors.white),
+              tooltip: '通知を受け取る',
+            ),
+          ),
+      ],
       title: Row(
         children: [
           const Text(
@@ -183,6 +186,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             final lateLabel = isLate ? shotState.lateLabel(postedAt) : '';
 
             return _PostCard(
+              postId: docs[index].id,
               username: data['username'] ?? 'ユーザー',
               photoUrl: data['photoUrl'] as String?,
               videoUrl: data['videoUrl'] as String?,
@@ -270,6 +274,7 @@ class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
 }
 
 class _PostCard extends StatelessWidget {
+  final String postId;
   final String username;
   final String? photoUrl;
   final String? videoUrl;
@@ -280,6 +285,7 @@ class _PostCard extends StatelessWidget {
   final String lateLabel;
 
   const _PostCard({
+    required this.postId,
     required this.username,
     required this.photoUrl,
     required this.videoUrl,
@@ -313,6 +319,7 @@ class _PostCard extends StatelessWidget {
         children: [
           _buildHeader(),
           _buildVideoArea(context),
+          _buildReactions(context),
         ],
       ),
     );
@@ -374,6 +381,59 @@ class _PostCard extends StatelessWidget {
     );
   }
 
+  Widget _buildReactions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Row(
+        children: [
+          // いいね
+          StreamBuilder<bool>(
+            stream: LikeService.isLiked(postId),
+            builder: (context, likedSnap) {
+              final liked = likedSnap.data ?? false;
+              return StreamBuilder<int>(
+                stream: LikeService.likeCount(postId),
+                builder: (context, countSnap) {
+                  final count = countSnap.data ?? 0;
+                  return _ReactionBtn(
+                    icon: liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : const Color(0xFF888888),
+                    label: count > 0 ? '$count' : '',
+                    onTap: () => LikeService.toggleLike(postId),
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+          // 絵文字リアクション
+          _ReactionBtn(
+            icon: Icons.add_reaction_outlined,
+            color: const Color(0xFF888888),
+            label: '',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('リアクション機能は近日実装予定です'), duration: Duration(seconds: 1)),
+              );
+            },
+          ),
+          const Spacer(),
+          // コメント
+          _ReactionBtn(
+            icon: Icons.chat_bubble_outline,
+            color: const Color(0xFF888888),
+            label: 'コメント',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('コメント機能は近日実装予定です'), duration: Duration(seconds: 1)),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVideoArea(BuildContext context) {
     return GestureDetector(
       onTap: () => _openVideo(context),
@@ -386,6 +446,40 @@ class _PostCard extends StatelessWidget {
             const Center(
               child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReactionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ReactionBtn({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            if (label.isNotEmpty) ...[
+              const SizedBox(width: 4),
+              Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500)),
+            ],
           ],
         ),
       ),

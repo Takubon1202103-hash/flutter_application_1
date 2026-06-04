@@ -66,7 +66,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('QRコードをスキャン', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'QRコードをスキャン',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+          overflow: TextOverflow.visible,
+        ),
       ),
       body: Stack(
         children: [
@@ -90,13 +94,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             ),
           Positioned(
             bottom: 48,
-            left: 0,
-            right: 0,
-            child: const Center(
-              child: Text(
-                '友達のQRコードをスキャンしてフォロー',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
+            left: 24,
+            right: 24,
+            child: const Text(
+              '友達のQRコードをスキャンして\nフォローしよう',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.6),
             ),
           ),
         ],
