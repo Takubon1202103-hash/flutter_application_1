@@ -379,7 +379,7 @@ class _CameraScreenState extends State<CameraScreen>
                   Expanded(
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.check),
-                      label: const Text('使用する'),
+                      label: const Text('投稿する'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
