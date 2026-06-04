@@ -131,7 +131,32 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
+
+                        // プロフィール挨拶
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user.uid)
+                              .snapshots(),
+                          builder: (context, snap) {
+                            final bio = snap.data?.get('bio') as String? ?? '';
+                            if (bio.isEmpty) return const SizedBox();
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                bio,
+                                style: const TextStyle(
+                                  color: Color(0xFFCCCCCC),
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          },
+                        ),
 
                         // 統計情報（フォロワー・フォロー中）
                         _StatsRow(),
