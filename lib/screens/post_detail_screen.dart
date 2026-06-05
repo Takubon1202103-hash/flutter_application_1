@@ -252,6 +252,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 }
 
                 return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
