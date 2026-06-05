@@ -48,7 +48,6 @@ class _CameraScreenState extends State<CameraScreen>
 
   // 編集
   int _filterIndex = 0;
-  int _effectIndex = 0; // 0=なし, 1=キラキラ, 2=光, 3=虹色
   int _mergeLayoutIndex = 0; // 0=上下, 1=左右, 2=PiP
   int _transitionIndex = 0; // 0=なし, 1=フェード, 2=スライド, 3=ズーム
   int _musicIndex = 0; // 0=なし, 1=Upbeat, 2=Chill, 3=Dramatic
@@ -908,47 +907,6 @@ class _CameraScreenState extends State<CameraScreen>
                         kVideoFilters[index].name,
                         style: TextStyle(
                           color: selected ? Colors.black : Colors.white70,
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // エフェクト選択
-            SizedBox(
-              height: 80,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                itemCount: 4,
-                itemBuilder: (context, index) {
-                  final effects = ['なし', '✨ キラキラ', '💫 光', '🌈 虹色'];
-                  final selected = _effectIndex == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _effectIndex = index),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.purple
-                            : const Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.circular(20),
-                        border: selected
-                            ? null
-                            : Border.all(color: const Color(0xFF333333)),
-                      ),
-                      child: Text(
-                        effects[index],
-                        style: TextStyle(
-                          color: selected ? Colors.white : Colors.white70,
                           fontSize: 13,
                           fontWeight: selected
                               ? FontWeight.bold
