@@ -35,10 +35,10 @@ class _MainShellState extends State<MainShell> {
     // ホームボタン（0）を押したら動画を再生、他のボタンは停止
     if (index == 0) {
       // ホーム画面に戻ってきたときに動画を再生再開
-      Future.delayed(const Duration(milliseconds: 100), () {
-        // TimelineScreen 内の _TikTokFeed の resumeVideo を呼び出す
-        // （直接呼び出しは難しいため、別の方法を検討）
-      });
+      _TikTokFeedState.resumeVideos();
+    } else {
+      // ホーム以外のボタンを押したら動画を停止
+      _TikTokFeedState.pauseAllVideos();
     }
   }
 

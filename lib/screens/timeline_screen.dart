@@ -165,18 +165,49 @@ class _TikTokFeedState extends State<_TikTokFeed> {
   int _currentPage = 0;
   final Map<int, VideoPlayerController> _controllers = {};
 
+  // 外部から動画停止を呼び出すための static インスタンス
+  static _TikTokFeedState? _instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _instance = this;
+  }
+
+  // 外部から呼び出し可能な static メソッド
+  static void pauseAllVideos() {
+    _instance?._pauseVideos();
+  }
+
+  static void resumeVideos() {
+    _instance?._resumeVideos();
+  }
+
+  void _pauseVideos() {
+    for (final c in _controllers.values) {
+      if (c.value.isPlaying) {
+        c.pause();
+      }
+    }
+  }
+
+  void _resumeVideos() {
+    final controller = _controllers[_currentPage];
+    if (controller != null &&
+        controller.value.isInitialized &&
+        !controller.value.isPlaying) {
+      controller.play();
+    }
+  }
+
   @override
   void activate() {
     super.activate();
+    _instance = this;
     // ホーム画面に戻ってきたときに現在のページの動画を再生再開
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        final controller = _controllers[_currentPage];
-        if (controller != null &&
-            controller.value.isInitialized &&
-            !controller.value.isPlaying) {
-          controller.play();
-        }
+        _resumeVideos();
       }
     });
   }
@@ -184,11 +215,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
   @override
   void deactivate() {
     // ホーム画面を離脱したら、すべての動画を停止
-    for (final c in _controllers.values) {
-      if (c.value.isPlaying) {
-        c.pause();
-      }
-    }
+    _pauseVideos();
     super.deactivate();
   }
 
