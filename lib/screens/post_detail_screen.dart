@@ -220,6 +220,49 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     );
                   },
                 ),
+                const Spacer(),
+                // キャプション編集ボタン（投稿者本人のみ）
+                Builder(
+                  builder: (context) {
+                    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                    final postUserId = widget.postData['userId'] as String?;
+                    final isOwner = currentUid != null && currentUid == postUserId;
+
+                    if (!isOwner) return const SizedBox();
+
+                    if (!_editingCaption) {
+                      return GestureDetector(
+                        onTap: () => setState(() => _editingCaption = true),
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          color: Colors.white70,
+                          size: 22,
+                        ),
+                      );
+                    }
+
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: _saveCaption,
+                          child: const Icon(Icons.check_circle,
+                              color: Colors.green, size: 22),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            _captionController.text =
+                                widget.postData['caption'] as String? ?? '';
+                            setState(() => _editingCaption = false);
+                          },
+                          child: const Icon(Icons.cancel,
+                              color: Colors.red, size: 22),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -396,103 +439,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 );
               },
             ),
-          ),
-
-          // キャプション編集ボタン（投稿者本人のみ）
-          Builder(
-            builder: (context) {
-              final currentUid = FirebaseAuth.instance.currentUser?.uid;
-              final postUserId = widget.postData['userId'] as String?;
-              final isOwner = currentUid != null && currentUid == postUserId;
-
-              return Visibility(
-                visible: isOwner,
-                child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: Row(
-                  children: [
-                    if (!_editingCaption)
-                      GestureDetector(
-                        onTap: () => setState(() => _editingCaption = true),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: const Color(0xFF333333),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.edit, color: Colors.white, size: 16),
-                              SizedBox(width: 6),
-                              Text(
-                                'キャプション編集',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: TextField(
-                          controller: _captionController,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'キャプション...',
-                            hintStyle:
-                                const TextStyle(color: Color(0xFF555555)),
-                            filled: true,
-                            fillColor: const Color(0xFF0A0A0A),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFF333333)),
-                            ),
-                          ),
-                          maxLines: 2,
-                        ),
-                      ),
-                    if (_editingCaption) ...[
-                      const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: _saveCaption,
-                        child: const Icon(Icons.check_circle,
-                            color: Colors.green, size: 28),
-                      ),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () {
-                          _captionController.text =
-                              widget.postData['caption'] as String? ?? '';
-                          setState(() => _editingCaption = false);
-                        },
-                        child: const Icon(Icons.cancel,
-                            color: Colors.red, size: 28),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-                ),
-              );
-            },
           ),
 
           // コメント入力
