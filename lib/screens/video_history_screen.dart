@@ -85,9 +85,9 @@ class _VideoHistoryScreenState extends State<VideoHistoryScreen> {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => _VideoDetailScreen(
+                        builder: (_) => PostDetailScreen(
+                          postId: docs[index].id,
                           postData: data,
-                          username: data['username'] ?? 'ユーザー',
                         ),
                       ),
                     );
