@@ -415,7 +415,7 @@ class _VideoPageState extends State<_VideoPage> {
       children: [
         // 上部: 投稿者情報
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(12, 80, 12, 12),
           child: Row(
             children: [
               widget.photoUrl != null
