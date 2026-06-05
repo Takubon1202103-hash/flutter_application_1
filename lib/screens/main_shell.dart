@@ -3,7 +3,7 @@ import 'timeline_screen.dart';
 import 'friends_screen.dart';
 import 'profile_screen.dart';
 import 'camera_screen.dart';
-import 'video_history_screen.dart';
+import 'travel_plan_list_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -17,10 +17,10 @@ class _MainShellState extends State<MainShell> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   final _screens = [
-    const TimelineScreen(),     // 0: ホーム
-    const FriendsScreen(),      // 1: 友達
-    const VideoHistoryScreen(), // 2: 写真
-    const ProfileScreen(),      // 3: マイページ
+    const TimelineScreen(),       // 0: ホーム
+    const FriendsScreen(),        // 1: 友達
+    const TravelPlanListScreen(), // 2: 旅行
+    const ProfileScreen(),        // 3: マイページ
   ];
 
   void _openCamera() {
@@ -129,8 +129,8 @@ class _BottomNavBar extends StatelessWidget {
                 ),
               ),
               _NavItem(
-                icon: Icons.image_outlined,
-                label: '写真',
+                icon: Icons.map_outlined,
+                label: '旅行',
                 selected: currentIndex == 2,
                 onTap: () => onTap(2),
               ),
