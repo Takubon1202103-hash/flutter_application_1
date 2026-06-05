@@ -504,7 +504,7 @@ class _VideoPageState extends State<_VideoPage> {
         // キャプション表示
         if (widget.caption != null && widget.caption!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 80, 8),
+            padding: const EdgeInsets.fromLTRB(0, 8, 80, 8),
             child: Text(
               widget.caption!,
               textAlign: TextAlign.left,
