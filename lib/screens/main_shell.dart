@@ -70,7 +70,7 @@ class _BottomNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 62,
+          height: 50,
           child: Row(
             children: [
               _NavItem(
@@ -92,8 +92,8 @@ class _BottomNavBar extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: Center(
                     child: Container(
-                      width: 54,
-                      height: 54,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
@@ -108,7 +108,7 @@ class _BottomNavBar extends StatelessWidget {
                       child: const Icon(
                         Icons.camera_alt,
                         color: Colors.black,
-                        size: 26,
+                        size: 20,
                       ),
                     ),
                   ),
