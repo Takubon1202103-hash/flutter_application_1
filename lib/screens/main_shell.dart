@@ -17,9 +17,9 @@ class _MainShellState extends State<MainShell> {
 
   static const _screens = [
     TimelineScreen(),     // 0: ホーム
-    ProfileScreen(),      // 1: マイページ
+    FriendsScreen(),      // 1: 友達
     VideoHistoryScreen(), // 2: 写真
-    FriendsScreen(),      // 3: 友達
+    ProfileScreen(),      // 3: マイページ
   ];
 
   void _openCamera() {
@@ -80,8 +80,8 @@ class _BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                icon: Icons.person_outline,
-                label: 'マイページ',
+                icon: Icons.people_outline,
+                label: '友達',
                 selected: currentIndex == 1,
                 onTap: () => onTap(1),
               ),
@@ -121,8 +121,8 @@ class _BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(2),
               ),
               _NavItem(
-                icon: Icons.people_outline,
-                label: '友達',
+                icon: Icons.person_outline,
+                label: 'マイページ',
                 selected: currentIndex == 3,
                 onTap: () => onTap(3),
               ),
