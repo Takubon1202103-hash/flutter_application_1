@@ -133,32 +133,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         child: Column(
           children: [
             // 動画プレイヤー
-          AspectRatio(
-            aspectRatio: _videoController?.value.isInitialized == true
-                ? _videoController!.value.aspectRatio
-                : 9 / 16,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (_videoController?.value.isPlaying == true) {
-                    _videoController?.pause();
-                  } else {
-                    _videoController?.play();
-                  }
-                });
-              },
-              child: _videoController?.value.isInitialized == true
-                  ? filter.colorFilter != null
-                      ? ColorFiltered(
-                          colorFilter: filter.colorFilter!,
-                          child: VideoPlayer(_videoController!),
-                        )
-                      : VideoPlayer(_videoController!)
-                  : const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                height: 300,
+                child: AspectRatio(
+                  aspectRatio: _videoController?.value.isInitialized == true
+                      ? _videoController!.value.aspectRatio
+                      : 9 / 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (_videoController?.value.isPlaying == true) {
+                          _videoController?.pause();
+                        } else {
+                          _videoController?.play();
+                        }
+                      });
+                    },
+                    child: _videoController?.value.isInitialized == true
+                        ? filter.colorFilter != null
+                            ? ColorFiltered(
+                                colorFilter: filter.colorFilter!,
+                                child: VideoPlayer(_videoController!),
+                              )
+                            : VideoPlayer(_videoController!)
+                        : const Center(
+                            child: CircularProgressIndicator(color: Colors.white),
+                          ),
+                  ),
+                ),
+              ),
             ),
-          ),
 
           // いいね・コメント数
           Padding(
