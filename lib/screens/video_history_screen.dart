@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../services/like_service.dart';
@@ -168,7 +169,10 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
             _ContextMenuItem(
               icon: Icons.download_outlined,
               label: 'ダウンロード',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _downloadVideo(context);
+              },
             ),
             _ContextMenuItem(
               icon: Icons.share_outlined,
@@ -192,6 +196,35 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
         ),
       ),
     );
+  }
+
+  Future<void> _downloadVideo(BuildContext context) async {
+    try {
+      final uri = Uri.parse(widget.videoUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ダウンロードを開始しました')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ダウンロードできませんでした')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラー: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _deleteVideo(BuildContext context) async {
