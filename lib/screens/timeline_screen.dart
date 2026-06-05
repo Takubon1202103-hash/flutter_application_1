@@ -519,7 +519,7 @@ class _VideoPageState extends State<_VideoPage> {
                 if (controller != null && controller.value.isInitialized)
                   Center(
                     child: AspectRatio(
-                      aspectRatio: 4 / 3,
+                      aspectRatio: controller.value.aspectRatio,
                       child: Builder(builder: (_) {
                         final f = kVideoFilters.firstWhere(
                           (f) => f.name == widget.filterName,
