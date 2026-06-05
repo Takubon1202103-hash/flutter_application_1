@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 class ShotState extends ChangeNotifier {
@@ -60,8 +61,25 @@ class ShotState extends ChangeNotifier {
     }
 
     _shotTime = await _fetchShotTime();
+    await _registerFCMToken(uid);
     _initialized = true;
     notifyListeners();
+  }
+
+  Future<void> _registerFCMToken(String uid) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('fcmTokens')
+          .doc(token)
+          .set({'registeredAt': FieldValue.serverTimestamp()});
+    } catch (e) {
+      debugPrint('FCM トークン登録エラー: $e');
+    }
   }
 
   Future<DateTime?> _fetchShotTime() async {
