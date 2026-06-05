@@ -256,7 +256,21 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
     if (confirm != true) return;
 
     try {
+      // 動画を削除
       await FirebaseStorage.instance.refFromURL(widget.videoUrl).delete();
+
+      // サムネイル画像も削除（存在する場合）
+      final thumbnailUrl = widget.postData['thumbnailUrl'] as String?;
+      if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) {
+        try {
+          await FirebaseStorage.instance.refFromURL(thumbnailUrl).delete();
+        } catch (e) {
+          // サムネイル削除失敗は無視（重要ではない）
+          debugPrint('サムネイル削除失敗: $e');
+        }
+      }
+
+      // Firestore から削除
       await FirebaseFirestore.instance
           .collection('posts')
           .doc(widget.postId)
