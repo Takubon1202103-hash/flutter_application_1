@@ -411,222 +411,206 @@ class _VideoPageState extends State<_VideoPage> {
   Widget build(BuildContext context) {
     final controller = widget.controller;
 
-    return GestureDetector(
-      onTap: _togglePlay,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 動画
-          Container(color: Colors.black),
-          if (controller != null && controller.value.isInitialized)
-            Center(
-              child: AspectRatio(
-                aspectRatio: controller.value.aspectRatio,
-                child: Builder(builder: (_) {
-                  final f = kVideoFilters.firstWhere(
-                    (f) => f.name == widget.filterName,
-                    orElse: () => kVideoFilters.first,
-                  );
-                  return f.colorFilter != null
-                      ? ColorFiltered(
-                          colorFilter: f.colorFilter!,
-                          child: VideoPlayer(controller),
-                        )
-                      : VideoPlayer(controller);
-                }),
-              ),
-            )
-          else
-            const Center(
-              child: CircularProgressIndicator(color: Colors.white38),
-            ),
-
-          // 一時停止アイコン
-          if (_showPauseIcon)
-            const Center(
-              child: Icon(Icons.pause_circle_filled,
-                  color: Colors.white54, size: 80),
-            ),
-
-          // 下部グラデーション
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 160,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.85),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 左下: ユーザー情報（Instagramスタイル）
-          Positioned(
-            bottom: 16,
-            left: 12,
-            right: 70,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    widget.photoUrl != null
-                        ? CircleAvatar(
-                            radius: 18,
-                            backgroundImage:
-                                NetworkImage(widget.photoUrl!),
-                          )
-                        : CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.red,
-                            child: Text(
-                              widget.username.isNotEmpty
-                                  ? widget.username[0]
-                                  : '?',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11),
-                            ),
-                          ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          StreamBuilder<DocumentSnapshot>(
-                            stream: FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(widget.userId)
-                                .snapshots(),
-                            builder: (context, snap) {
-                              final displayName =
-                                  snap.data?.get('displayName') as String? ??
-                                      widget.username;
-                              return Text(displayName,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis);
-                            },
-                          ),
-                          Row(
-                            children: [
-                              Text(widget.timeAgo,
-                                  style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11)),
-                              if (widget.locationName != null) ...[
-                                const Text(' · ',
-                                    style: TextStyle(
-                                        color: Colors.white38,
-                                        fontSize: 11)),
-                                const Icon(Icons.location_on,
-                                    color: Colors.white54, size: 10),
-                                const SizedBox(width: 2),
-                                Expanded(
-                                  child: Text(widget.locationName!,
-                                      style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 11),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (widget.caption != null &&
-                    widget.caption!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.caption!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      height: 1.3,
-                      shadows: [
-                        Shadow(blurRadius: 4, color: Colors.black87)
-                      ],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // 右側: リアクションボタン（Instagramスタイル）
-          Positioned(
-            bottom: 20,
-            right: 10,
-            child: Column(
-              children: [
-                _SideButton(postId: widget.postId),
-                const SizedBox(height: 18),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PostDetailScreen(
-                          postId: widget.postId,
-                          postData: widget.postData,
+    return Column(
+      children: [
+        // 上部: 投稿者情報
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              widget.photoUrl != null
+                  ? CircleAvatar(
+                      radius: 16,
+                      backgroundImage: NetworkImage(widget.photoUrl!),
+                    )
+                  : CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        widget.username.isNotEmpty ? widget.username[0] : '?',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
                         ),
                       ),
-                    );
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline, color: Colors.white, size: 30,
-                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
-                      const SizedBox(height: 6),
-                      const Text('コメント',
-                          style: TextStyle(color: Colors.white, fontSize: 10,
-                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
-                    ],
-                  ),
+                    ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(widget.userId)
+                          .snapshots(),
+                      builder: (context, snap) {
+                        final displayName =
+                            snap.data?.get('displayName') as String? ??
+                                widget.username;
+                        return Text(
+                          displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          widget.timeAgo,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        ),
+                        if (widget.locationName != null) ...[
+                          const Text(
+                            ' · ',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const Icon(Icons.location_on,
+                              color: Colors.white54, size: 10),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              widget.locationName!,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
-                _ReactionButton(postId: widget.postId),
+              ),
+            ],
+          ),
+        ),
+        // 中央: 動画エリア
+        Expanded(
+          child: GestureDetector(
+            onTap: _togglePlay,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(color: Colors.black),
+                if (controller != null && controller.value.isInitialized)
+                  Center(
+                    child: AspectRatio(
+                      aspectRatio: controller.value.aspectRatio,
+                      child: Builder(builder: (_) {
+                        final f = kVideoFilters.firstWhere(
+                          (f) => f.name == widget.filterName,
+                          orElse: () => kVideoFilters.first,
+                        );
+                        return f.colorFilter != null
+                            ? ColorFiltered(
+                                colorFilter: f.colorFilter!,
+                                child: VideoPlayer(controller),
+                              )
+                            : VideoPlayer(controller);
+                      }),
+                    ),
+                  )
+                else
+                  const Center(
+                    child: CircularProgressIndicator(color: Colors.white38),
+                  ),
+                if (_showPauseIcon)
+                  const Center(
+                    child: Icon(Icons.pause_circle_filled,
+                        color: Colors.white54, size: 80),
+                  ),
+                if (widget.caption != null && widget.caption!.isNotEmpty)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Text(
+                      widget.caption!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        height: 1.3,
+                        shadows: [
+                          Shadow(blurRadius: 4, color: Colors.black87)
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (controller != null && controller.value.isInitialized)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: VideoProgressIndicator(
+                      controller,
+                      allowScrubbing: true,
+                      colors: const VideoProgressColors(
+                        playedColor: Colors.white,
+                        bufferedColor: Colors.white24,
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-
-          // プログレスバー
-          if (controller != null && controller.value.isInitialized)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: VideoProgressIndicator(
-                controller,
-                allowScrubbing: true,
-                colors: const VideoProgressColors(
-                  playedColor: Colors.white,
-                  bufferedColor: Colors.white24,
-                  backgroundColor: Colors.transparent,
+        ),
+        // 下部: リアクションボタン
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _SideButton(postId: widget.postId),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PostDetailScreen(
+                        postId: widget.postId,
+                        postData: widget.postData,
+                      ),
+                    ),
+                  );
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline,
+                        color: Colors.white, size: 28),
+                    const SizedBox(height: 4),
+                    const Text('コメント',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        )),
+                  ],
                 ),
               ),
-            ),
-        ],
-      ),
+              _ReactionButton(postId: widget.postId),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
