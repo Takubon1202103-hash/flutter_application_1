@@ -325,10 +325,15 @@ class _CameraScreenState extends State<CameraScreen>
     _selectedCameraIndex = frontIndex;
     await _setupCamera(_cameras[frontIndex]);
 
+    // フロントカメラの初期化完了後、自動で録画開始
+    if (mounted && _controller != null && _controller!.value.isInitialized) {
+      await _startRecording();
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('フロントカメラで自撮りを撮影してください'),
+          content: Text('フロントカメラで自撮りを撮影中'),
           duration: Duration(seconds: 2),
         ),
       );
