@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../services/like_service.dart';
 import '../utils/video_filters.dart';
@@ -156,6 +158,132 @@ class _VideoPageState extends State<_VideoPage> {
     }
   }
 
+  void _showContextMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        color: const Color(0xFF1A1A1A),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _ContextMenuItem(
+              icon: Icons.download_outlined,
+              label: 'ダウンロード',
+              onTap: () {
+                Navigator.pop(context);
+                _downloadVideo();
+              },
+            ),
+            _ContextMenuItem(
+              icon: Icons.share_outlined,
+              label: '共有',
+              onTap: () {
+                Navigator.pop(context);
+                _shareVideo();
+              },
+            ),
+            _ContextMenuItem(
+              icon: Icons.delete_outlined,
+              label: '削除',
+              color: Colors.red,
+              onTap: () {
+                Navigator.pop(context);
+                _deleteVideo();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadVideo() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ダウンロード機能は準備中です')),
+    );
+  }
+
+  Future<void> _shareVideo() async {
+    final videoUrl = widget.postData['videoUrl'] as String?;
+    if (videoUrl == null) return;
+
+    await Share.share(
+      '${widget.username}の動画を見てください！\n$videoUrl',
+      subject: 'OneShot 動画シェア',
+    );
+  }
+
+  Future<void> _deleteVideo() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '削除確認',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'この動画を削除しますか？',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('削除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final videoUrl = widget.postData['videoUrl'] as String?;
+      final thumbnailUrl = widget.postData['thumbnailUrl'] as String?;
+
+      // Firebase Storage から削除
+      if (videoUrl != null) {
+        await FirebaseStorage.instance.refFromURL(videoUrl).delete();
+      }
+      if (thumbnailUrl != null) {
+        await FirebaseStorage.instance.refFromURL(thumbnailUrl).delete();
+      }
+
+      // Firestore から削除
+      await FirebaseFirestore.instance
+          .collection('posts')
+          .doc(widget.postId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('動画を削除しました')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('削除に失敗しました: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -166,6 +294,7 @@ class _VideoPageState extends State<_VideoPage> {
 
     return GestureDetector(
       onTap: _togglePlay,
+      onLongPress: _showContextMenu,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -369,6 +498,47 @@ class _SideButton extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class _ContextMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _ContextMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 16),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
