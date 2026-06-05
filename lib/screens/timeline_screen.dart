@@ -511,15 +511,15 @@ class _VideoPageState extends State<_VideoPage> {
                 fit: StackFit.expand,
                 children: [
                   Container(
-                    color: Colors.black,
                     decoration: BoxDecoration(
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
                 if (controller != null && controller.value.isInitialized)
                   Center(
                     child: AspectRatio(
-                      aspectRatio: controller.value.aspectRatio,
+                      aspectRatio: 4 / 3,
                       child: Builder(builder: (_) {
                         final f = kVideoFilters.firstWhere(
                           (f) => f.name == widget.filterName,
