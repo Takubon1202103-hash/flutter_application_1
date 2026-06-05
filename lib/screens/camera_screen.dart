@@ -49,6 +49,7 @@ class _CameraScreenState extends State<CameraScreen>
   // 編集
   int _filterIndex = 0;
   int _effectIndex = 0; // 0=なし, 1=キラキラ, 2=光, 3=虹色
+  int _mergeLayoutIndex = 0; // 0=上下, 1=左右, 2=PiP
   final _captionController = TextEditingController();
 
   // 投稿制限
