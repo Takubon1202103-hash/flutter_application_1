@@ -161,14 +161,73 @@ class _TikTokFeed extends StatefulWidget {
 }
 
 class _TikTokFeedState extends State<_TikTokFeed> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
   final Map<int, VideoPlayerController> _controllers = {};
 
   @override
+  void deactivate() {
+    for (final c in _controllers.values) {
+      c.pause();
+    }
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _pageController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _initController(
+      int index, List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+    if (index < 0 || index >= docs.length) return;
+    if (_controllers.containsKey(index)) return;
+
+    final videoUrl = docs[index].data()['videoUrl'] as String?;
+    if (videoUrl == null) return;
+
+    final controller =
+        VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    _controllers[index] = controller;
+
+    await controller.initialize();
+    controller.setLooping(true);
+
+    if (mounted && _currentPage == index) {
+      controller.play();
+      setState(() {});
+    }
+  }
+
+  void _onPageChanged(
+      int page, List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    // 前のページを停止
+    _controllers[_currentPage]?.pause();
+    _currentPage = page;
+
+    // 現在ページを再生
+    if (_controllers.containsKey(page)) {
+      _controllers[page]!.play();
+    } else {
+      _initController(page, docs);
+    }
+
+    // 次ページをプリロード
+    _initController(page + 1, docs);
+
+    // 古いコントローラを破棄（3ページ以上離れたもの）
+    final toRemove =
+        _controllers.keys.where((k) => (k - page).abs() > 2).toList();
+    for (final k in toRemove) {
+      _controllers[k]!.dispose();
+      _controllers.remove(k);
+    }
+
+    setState(() {});
   }
 
   @override
@@ -231,8 +290,18 @@ class _TikTokFeedState extends State<_TikTokFeed> {
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+            // 初回ロード時に最初のページを初期化
+            if (_controllers.isEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _initController(0, docs);
+                _initController(1, docs);
+              });
+            }
+
+            return PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              onPageChanged: (p) => _onPageChanged(p, docs),
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final data = docs[index].data();
@@ -245,40 +314,20 @@ class _TikTokFeedState extends State<_TikTokFeed> {
                 final lateLabel =
                     isLate ? widget.shotState.lateLabel(postedAt) : '';
 
-                if (!_controllers.containsKey(index)) {
-                  final videoUrl = data['videoUrl'] as String?;
-                  if (videoUrl != null) {
-                    _controllers[index] = VideoPlayerController.networkUrl(
-                      Uri.parse(videoUrl),
-                    )..initialize().then((_) {
-                        if (mounted) setState(() {});
-                      });
-                  }
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      height: 450,
-                      child: _VideoPage(
-                        postId: docs[index].id,
-                        postData: data,
-                        userId: data['userId'] as String? ?? '',
-                        controller: _controllers[index],
-                        username: data['username'] ?? 'ユーザー',
-                        photoUrl: data['photoUrl'] as String?,
-                        timeAgo: _formatTimeAgo(createdAt),
-                        locationName: data['locationName'] as String?,
-                        caption: data['caption'] as String?,
-                        filterName: data['filterName'] as String?,
-                        isOwn: isOwn,
-                        isLate: isLate,
-                        lateLabel: lateLabel,
-                      ),
-                    ),
-                  ),
+                return _VideoPage(
+                  postId: docs[index].id,
+                  postData: data,
+                  userId: data['userId'] as String? ?? '',
+                  controller: _controllers[index],
+                  username: data['username'] ?? 'ユーザー',
+                  photoUrl: data['photoUrl'] as String?,
+                  timeAgo: _formatTimeAgo(createdAt),
+                  locationName: data['locationName'] as String?,
+                  caption: data['caption'] as String?,
+                  filterName: data['filterName'] as String?,
+                  isOwn: isOwn,
+                  isLate: isLate,
+                  lateLabel: lateLabel,
                 );
               },
             );
