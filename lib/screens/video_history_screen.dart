@@ -59,15 +59,17 @@ class _VideoHistoryScreenState extends State<VideoHistoryScreen> {
           return Scrollbar(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.6,
               ),
               padding: const EdgeInsets.all(12),
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final data = docs[index].data();
                 final videoUrl = data['videoUrl'] as String?;
+                final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
 
                 if (videoUrl == null) {
                   return const SizedBox();
@@ -78,6 +80,7 @@ class _VideoHistoryScreenState extends State<VideoHistoryScreen> {
                   postData: data,
                   videoUrl: videoUrl,
                   username: data['username'] ?? 'ユーザー',
+                  createdAt: createdAt,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -103,6 +106,7 @@ class _VideoThumbnail extends StatefulWidget {
   final Map<String, dynamic> postData;
   final String videoUrl;
   final String username;
+  final DateTime? createdAt;
   final VoidCallback onTap;
 
   const _VideoThumbnail({
@@ -110,6 +114,7 @@ class _VideoThumbnail extends StatefulWidget {
     required this.postData,
     required this.videoUrl,
     required this.username,
+    required this.createdAt,
     required this.onTap,
   });
 
@@ -241,61 +246,96 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
     return GestureDetector(
       onTap: widget.onTap,
       onLongPress: () => _showContextMenu(context),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF333333)),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            FutureBuilder<Uint8List?>(
-              future: _thumbnailFuture,
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      snapshot.data!,
-                      fit: BoxFit.cover,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF333333)),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FutureBuilder<Uint8List?>(
+                    future: _thumbnailFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            snapshot.data!,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      } else if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Container(
+                          color: Colors.black,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(Colors.white30),
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return Container(
+                          color: Colors.black,
+                          child: const Icon(
+                            Icons.videocam_outlined,
+                            color: Colors.white30,
+                            size: 32,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const Center(
+                    child: Icon(
+                      Icons.play_circle_outlined,
+                      color: Colors.white,
+                      size: 40,
                     ),
-                  );
-                } else if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Container(
-                    color: Colors.black,
-                    child: const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white30),
-                        ),
-                      ),
-                    ),
-                  );
-                } else {
-                  return Container(
-                    color: Colors.black,
-                    child: const Icon(
-                      Icons.videocam_outlined,
-                      color: Colors.white30,
-                      size: 32,
-                    ),
-                  );
-                }
-              },
-            ),
-            const Center(
-              child: Icon(
-                Icons.play_circle_outlined,
-                color: Colors.white,
-                size: 40,
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          // 日付とユーザー名
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.createdAt != null)
+                  Text(
+                    '${widget.createdAt!.year}年${widget.createdAt!.month}月${widget.createdAt!.day}日',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                Text(
+                  widget.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
