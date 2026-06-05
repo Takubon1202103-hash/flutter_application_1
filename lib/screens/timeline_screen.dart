@@ -166,6 +166,14 @@ class _TikTokFeedState extends State<_TikTokFeed> {
   final Map<int, VideoPlayerController> _controllers = {};
 
   @override
+  void deactivate() {
+    for (final c in _controllers.values) {
+      c.pause();
+    }
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     for (final c in _controllers.values) {
