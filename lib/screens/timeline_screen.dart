@@ -604,20 +604,7 @@ class _VideoPageState extends State<_VideoPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                GestureDetector(
-                  onTap: () {},
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.share_outlined, color: Colors.white, size: 30,
-                          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
-                      const SizedBox(height: 6),
-                      const Text('シェア',
-                          style: TextStyle(color: Colors.white, fontSize: 10,
-                              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
-                    ],
-                  ),
-                ),
+                _ReactionButton(postId: widget.postId),
               ],
             ),
           ),
@@ -784,6 +771,137 @@ class _ShotTimerBadgeState extends State<_ShotTimerBadge> {
                   fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+}
+
+class _ReactionButton extends StatefulWidget {
+  final String postId;
+  const _ReactionButton({required this.postId});
+
+  @override
+  State<_ReactionButton> createState() => _ReactionButtonState();
+}
+
+class _ReactionButtonState extends State<_ReactionButton>
+    with TickerProviderStateMixin {
+  static const reactions = ['❤️', '😂', '😮', '😢', '🔥', '😍'];
+  int _selectedReaction = 0;
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _showReactionMenu(TapDownDetails details) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset offset = box.localToGlobal(Offset.zero);
+
+    showMenu<int>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + details.localPosition.dx,
+        offset.dy + details.localPosition.dy - 200,
+        0,
+        0,
+      ),
+      items: List.generate(
+        reactions.length,
+        (i) => PopupMenuItem(
+          value: i,
+          child: Text(reactions[i], style: const TextStyle(fontSize: 24)),
+        ),
+      ),
+    ).then((value) {
+      if (value != null) {
+        setState(() => _selectedReaction = value);
+        _playReactionAnimation(details.globalPosition);
+      }
+    });
+  }
+
+  void _playReactionAnimation(Offset position) {
+    _animController.forward(from: 0);
+
+    Overlay.of(context).insert(
+      OverlayEntry(
+        builder: (context) => _FloatingReaction(
+          position: position,
+          reaction: reactions[_selectedReaction],
+          animation: _animController,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _showReactionMenu,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add_reaction_outlined,
+              color: Colors.white,
+              size: 30,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+          const SizedBox(height: 6),
+          const Text('リアクション',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingReaction extends StatelessWidget {
+  final Offset position;
+  final String reaction;
+  final AnimationController animation;
+
+  const _FloatingReaction({
+    required this.position,
+    required this.reaction,
+    required this.animation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tween = Tween<Offset>(
+      begin: position,
+      end: Offset(position.dx, position.dy - 150),
+    );
+    final opacityTween = Tween<double>(begin: 1, end: 0);
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Positioned(
+          left: tween.evaluate(animation).dx,
+          top: tween.evaluate(animation).dy,
+          child: Opacity(
+            opacity: opacityTween.evaluate(animation),
+            child: Text(
+              reaction,
+              style: const TextStyle(fontSize: 32),
+            ),
+          ),
+        );
+      },
     );
   }
 }
