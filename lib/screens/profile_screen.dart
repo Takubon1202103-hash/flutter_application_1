@@ -6,9 +6,9 @@ import '../services/auth_service.dart';
 import '../services/follow_service.dart';
 import '../widgets/video_thumbnail_widget.dart';
 import 'follow_list_screen.dart';
+import 'notifications_screen.dart';
 import 'post_detail_screen.dart';
 import 'settings_screen.dart';
-import 'video_history_screen.dart';
 import 'today_posts_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -30,7 +30,7 @@ class ProfileScreen extends StatelessWidget {
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const VideoHistoryScreen()),
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
               );
             },
           ),
