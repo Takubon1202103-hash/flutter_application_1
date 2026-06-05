@@ -505,10 +505,12 @@ class _VideoPageState extends State<_VideoPage> {
         Expanded(
           child: GestureDetector(
             onTap: _togglePlay,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Container(color: Colors.black),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: Colors.black),
                 if (controller != null && controller.value.isInitialized)
                   Center(
                     child: AspectRatio(
@@ -612,6 +614,7 @@ class _VideoPageState extends State<_VideoPage> {
               ],
             ),
           ),
+            ),
         ),
       ],
     );
