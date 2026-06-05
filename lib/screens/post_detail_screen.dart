@@ -115,9 +115,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // 動画プレイヤー
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 動画プレイヤー
           AspectRatio(
             aspectRatio: _videoController?.value.isInitialized == true
                 ? _videoController!.value.aspectRatio
@@ -227,7 +228,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
 
           // コメント一覧
-          Expanded(
+          SizedBox(
+            height: 300,
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('posts')
@@ -356,6 +358,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
