@@ -1123,22 +1123,28 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-            // 音楽選択
+            // 著作権フリー音楽選択
             SizedBox(
               height: 80,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                itemCount: 4,
+                itemCount: 5,
                 itemBuilder: (context, index) {
-                  final musics = ['なし', '🎵 Upbeat', '😌 Chill', '🎬 Dramatic'];
+                  final musics = [
+                    'なし',
+                    '🎵 Pixabay\n(Up)',
+                    '😌 Pixabay\n(Chill)',
+                    '🎬 Incompetech\n(Drama)',
+                    '🎹 YouTube\nLibrary'
+                  ];
                   final selected = _musicIndex == index;
                   return GestureDetector(
                     onTap: () => setState(() => _musicIndex = index),
                     child: Container(
                       margin: const EdgeInsets.only(right: 10),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: selected
                             ? Colors.pink
@@ -1148,15 +1154,22 @@ class _CameraScreenState extends State<CameraScreen>
                             ? null
                             : Border.all(color: const Color(0xFF333333)),
                       ),
-                      child: Text(
-                        musics[index],
-                        style: TextStyle(
-                          color: selected ? Colors.white : Colors.white70,
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            musics[index],
+                            style: TextStyle(
+                              color: selected ? Colors.white : Colors.white70,
+                              fontSize: 11,
+                              fontWeight: selected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                          ),
+                        ],
                       ),
                     ),
                   );
