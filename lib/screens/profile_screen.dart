@@ -207,6 +207,29 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+
+                        // テスト用：postLimit リセットボタン
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _resetPostLimit(context, user.uid);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange.withOpacity(0.3),
+                              foregroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              '🧪 postLimit をリセット（テスト用）',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -237,6 +260,31 @@ class ProfileScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // テスト用：postLimit をリセット
+  Future<void> _resetPostLimit(BuildContext context, String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'postLimit': 6,
+        'lastPostLimitResetAt': FieldValue.serverTimestamp(),
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ postLimit をリセットしました（6枚）'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ リセット失敗: $e')),
+        );
+      }
+    }
   }
 }
 
