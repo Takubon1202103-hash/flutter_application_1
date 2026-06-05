@@ -517,23 +517,32 @@ class _VideoPageState extends State<_VideoPage> {
                     ),
                   ),
                 if (controller != null && controller.value.isInitialized)
-                  Center(
-                    child: AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Builder(builder: (_) {
-                        final f = kVideoFilters.firstWhere(
-                          (f) => f.name == widget.filterName,
-                          orElse: () => kVideoFilters.first,
-                        );
-                        return f.colorFilter != null
-                            ? ColorFiltered(
-                                colorFilter: f.colorFilter!,
+                  Builder(builder: (_) {
+                    final f = kVideoFilters.firstWhere(
+                      (f) => f.name == widget.filterName,
+                      orElse: () => kVideoFilters.first,
+                    );
+                    return f.colorFilter != null
+                        ? ColorFiltered(
+                            colorFilter: f.colorFilter!,
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: controller.value.size.width,
+                                height: controller.value.size.height,
                                 child: VideoPlayer(controller),
-                              )
-                            : VideoPlayer(controller);
-                      }),
-                    ),
-                  )
+                              ),
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: controller.value.size.width,
+                              height: controller.value.size.height,
+                              child: VideoPlayer(controller),
+                            ),
+                          );
+                  })
                 else
                   const Center(
                     child: CircularProgressIndicator(color: Colors.white38),
