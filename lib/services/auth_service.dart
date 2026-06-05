@@ -30,6 +30,7 @@ class AuthService {
 
     if (credential?.user != null) {
       await _saveUser(credential!.user!);
+      await _initializeNotifications(credential!.user!.uid);
     }
     return credential;
   }
@@ -39,7 +40,27 @@ class AuthService {
       'displayName': user.displayName ?? 'ユーザー',
       'photoUrl': user.photoURL,
       'updatedAt': FieldValue.serverTimestamp(),
+      'postLimit': 6,
+      'isPenalized': false,
+      'penaltyExpireAt': null,
     }, SetOptions(merge: true));
+  }
+
+  static Future<void> _initializeNotifications(String uid) async {
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(dateKey)
+        .set({
+          'sentAt': [],
+          'postedAt': null,
+          'isOnTime': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
   }
 
   static Future<void> signOut() async {
