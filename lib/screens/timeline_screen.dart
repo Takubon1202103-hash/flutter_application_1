@@ -510,7 +510,12 @@ class _VideoPageState extends State<_VideoPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(color: Colors.black),
+                  Container(
+                    color: Colors.black,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
                 if (controller != null && controller.value.isInitialized)
                   Center(
                     child: AspectRatio(
