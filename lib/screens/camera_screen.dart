@@ -52,6 +52,8 @@ class _CameraScreenState extends State<CameraScreen>
   int _filterIndex = 0;
   int _effectIndex = 0; // 0=なし, 1=キラキラ, 2=光, 3=虹色
   int _mergeLayoutIndex = 0; // 0=上下, 1=左右, 2=PiP
+  int _transitionIndex = 0; // 0=なし, 1=フェード, 2=スライド, 3=ズーム
+  int _musicIndex = 0; // 0=なし, 1=Upbeat, 2=Chill, 3=Dramatic
   final _captionController = TextEditingController();
 
   // 投稿制限
@@ -388,6 +390,19 @@ class _CameraScreenState extends State<CameraScreen>
       final backVideoPath = _backVideo!.path;
       final frontImagePath = _frontVideo!.path;
 
+      // トランジションフィルター構築
+      String transitionFilter = '';
+      if (_transitionIndex == 1) {
+        // フェード効果
+        transitionFilter = ',fade=t=out:st=2:d=0.5';
+      } else if (_transitionIndex == 2) {
+        // スライド効果
+        transitionFilter = ',hflip';
+      } else if (_transitionIndex == 3) {
+        // ズーム効果
+        transitionFilter = ',scale=trunc(iw/2):trunc(ih/2):flags=lanczos,scale=iw:ih';
+      }
+
       // レイアウトに応じた FFmpeg コマンド構築
       String ffmpegCommand;
 
@@ -395,19 +410,19 @@ class _CameraScreenState extends State<CameraScreen>
         // 上下配置
         ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
             '-filter_complex "[0:v]scale=1080:1920[back];[1:v]scale=1080:960[front];'
-            '[back][front]vstack=inputs=2[out]" '
+            '[back][front]vstack=inputs=2$transitionFilter[out]" '
             '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
       } else if (_mergeLayoutIndex == 1) {
         // 左右配置
         ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
             '-filter_complex "[0:v]scale=540:1920[back];[1:v]scale=540:1920[front];'
-            '[back][front]hstack=inputs=2[out]" '
+            '[back][front]hstack=inputs=2$transitionFilter[out]" '
             '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
       } else {
         // PiP（Picture-in-Picture）配置
         ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
             '-filter_complex "[0:v]scale=1080:1920[back];[1:v]scale=270:480[front];'
-            '[back][front]overlay=x=805:y=1440[out]" '
+            '[back][front]overlay=x=805:y=1440$transitionFilter[out]" '
             '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
       }
 
@@ -1066,6 +1081,88 @@ class _CameraScreenState extends State<CameraScreen>
                   },
                 ),
               ),
+
+            // トランジション選択
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                itemCount: 4,
+                itemBuilder: (context, index) {
+                  final transitions = ['なし', '🔄 フェード', '→ スライド', '🔍 ズーム'];
+                  final selected = _transitionIndex == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => _transitionIndex = index),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.orange
+                            : const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(20),
+                        border: selected
+                            ? null
+                            : Border.all(color: const Color(0xFF333333)),
+                      ),
+                      child: Text(
+                        transitions[index],
+                        style: TextStyle(
+                          color: selected ? Colors.white : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // 音楽選択
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                itemCount: 4,
+                itemBuilder: (context, index) {
+                  final musics = ['なし', '🎵 Upbeat', '😌 Chill', '🎬 Dramatic'];
+                  final selected = _musicIndex == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => _musicIndex = index),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.pink
+                            : const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(20),
+                        border: selected
+                            ? null
+                            : Border.all(color: const Color(0xFF333333)),
+                      ),
+                      child: Text(
+                        musics[index],
+                        style: TextStyle(
+                          color: selected ? Colors.white : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
             // キャプション入力
             Padding(
