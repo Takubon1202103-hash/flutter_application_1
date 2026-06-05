@@ -1,9 +1,11 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import '../services/like_service.dart';
 import '../utils/video_filters.dart';
 import 'post_detail_screen.dart';
@@ -505,7 +507,7 @@ class _SideButton extends StatelessWidget {
   }
 }
 
-class _VideoThumbnail extends StatelessWidget {
+class _VideoThumbnail extends StatefulWidget {
   final String postId;
   final Map<String, dynamic> postData;
   final String videoUrl;
@@ -521,6 +523,33 @@ class _VideoThumbnail extends StatelessWidget {
     required this.username,
     required this.onTap,
   });
+
+  @override
+  State<_VideoThumbnail> createState() => _VideoThumbnailState();
+}
+
+class _VideoThumbnailState extends State<_VideoThumbnail> {
+  late Future<Uint8List?> _thumbnailFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _thumbnailFuture = _generateThumbnail();
+  }
+
+  Future<Uint8List?> _generateThumbnail() async {
+    try {
+      final uint8list = await VideoThumbnail.thumbnailData(
+        video: widget.videoUrl,
+        imageFormat: ImageFormat.PNG,
+        maxHeight: 150,
+        quality: 75,
+      );
+      return uint8list;
+    } catch (e) {
+      return null;
+    }
+  }
 
   void _showContextMenu(BuildContext context) {
     showModalBottomSheet(
@@ -550,7 +579,7 @@ class _VideoThumbnail extends StatelessWidget {
               label: '共有',
               onTap: () {
                 Navigator.pop(context);
-                Share.share('$username の動画を見てください！\n$videoUrl');
+                Share.share('${widget.username} の動画を見てください！\n${widget.videoUrl}');
               },
             ),
             _ContextMenuItem(
@@ -598,13 +627,13 @@ class _VideoThumbnail extends StatelessWidget {
     if (confirm != true) return;
 
     try {
-      if (thumbnailUrl != null) {
-        await FirebaseStorage.instance.refFromURL(thumbnailUrl!).delete();
+      if (widget.thumbnailUrl != null) {
+        await FirebaseStorage.instance.refFromURL(widget.thumbnailUrl!).delete();
       }
-      await FirebaseStorage.instance.refFromURL(videoUrl).delete();
+      await FirebaseStorage.instance.refFromURL(widget.videoUrl).delete();
       await FirebaseFirestore.instance
           .collection('posts')
-          .doc(postId)
+          .doc(widget.postId)
           .delete();
 
       if (context.mounted) {
@@ -624,7 +653,7 @@ class _VideoThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       onLongPress: () => _showContextMenu(context),
       child: Container(
         decoration: BoxDecoration(
@@ -635,31 +664,44 @@ class _VideoThumbnail extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // サムネイル
-            if (thumbnailUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  thumbnailUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+            // サムネイル（動画から自動生成）
+            FutureBuilder<Uint8List?>(
+              future: _thumbnailFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      snapshot.data!,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                } else if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    color: Colors.black,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white30),
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return Container(
                     color: Colors.black,
                     child: const Icon(
-                      Icons.broken_image,
+                      Icons.videocam_outlined,
                       color: Colors.white30,
+                      size: 32,
                     ),
-                  ),
-                ),
-              )
-            else
-              Container(
-                color: Colors.black,
-                child: const Icon(
-                  Icons.videocam_outlined,
-                  color: Colors.white30,
-                  size: 32,
-                ),
-              ),
+                  );
+                }
+              },
+            ),
             // 再生アイコン
             const Center(
               child: Icon(
@@ -673,7 +715,6 @@ class _VideoThumbnail extends StatelessWidget {
       ),
     );
   }
-}
 
 class _VideoDetailScreen extends StatefulWidget {
   final String postId;
