@@ -832,17 +832,26 @@ class _ReactionButtonState extends State<_ReactionButton>
   }
 
   void _playReactionAnimation(Offset position) {
-    _animController.forward(from: 0);
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
 
-    Overlay.of(context).insert(
-      OverlayEntry(
-        builder: (context) => _FloatingReaction(
-          position: position,
-          reaction: reactions[_selectedReaction],
-          animation: _animController,
-        ),
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => _FloatingReaction(
+        position: position,
+        reaction: reactions[_selectedReaction],
+        animation: controller,
+        onComplete: () {
+          entry.remove();
+          controller.dispose();
+        },
       ),
     );
+
+    Overlay.of(context).insert(entry);
+    controller.forward();
   }
 
   @override
@@ -868,35 +877,57 @@ class _ReactionButtonState extends State<_ReactionButton>
   }
 }
 
-class _FloatingReaction extends StatelessWidget {
+class _FloatingReaction extends StatefulWidget {
   final Offset position;
   final String reaction;
   final AnimationController animation;
+  final VoidCallback onComplete;
 
   const _FloatingReaction({
     required this.position,
     required this.reaction,
     required this.animation,
+    required this.onComplete,
   });
 
   @override
+  State<_FloatingReaction> createState() => _FloatingReactionState();
+}
+
+class _FloatingReactionState extends State<_FloatingReaction> {
+  @override
+  void initState() {
+    super.initState();
+    widget.animation.addStatusListener(_handleAnimationStatus);
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      widget.onComplete();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.animation.removeStatusListener(_handleAnimationStatus);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tween = Tween<Offset>(
-      begin: position,
-      end: Offset(position.dx, position.dy - 150),
-    );
+    final offsetTween = Tween<double>(begin: 0, end: -150);
     final opacityTween = Tween<double>(begin: 1, end: 0);
 
     return AnimatedBuilder(
-      animation: animation,
+      animation: widget.animation,
       builder: (context, child) {
         return Positioned(
-          left: tween.evaluate(animation).dx,
-          top: tween.evaluate(animation).dy,
+          left: widget.position.dx,
+          top: widget.position.dy + offsetTween.evaluate(widget.animation),
           child: Opacity(
-            opacity: opacityTween.evaluate(animation),
+            opacity: opacityTween.evaluate(widget.animation),
             child: Text(
-              reaction,
+              widget.reaction,
               style: const TextStyle(fontSize: 32),
             ),
           ),
