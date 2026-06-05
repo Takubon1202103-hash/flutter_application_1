@@ -46,10 +46,15 @@ class _CameraScreenState extends State<CameraScreen>
   int _filterIndex = 0;
   final _captionController = TextEditingController();
 
+  // 投稿制限
+  int _postLimit = 6;
+  bool _isPenalized = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadPostLimit();
     _initCamera();
   }
 
@@ -273,6 +278,27 @@ class _CameraScreenState extends State<CameraScreen>
     });
   }
 
+  Future<void> _loadPostLimit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          _postLimit = doc['postLimit'] as int? ?? 6;
+          _isPenalized = doc['isPenalized'] as bool? ?? false;
+        });
+      }
+    } catch (e) {
+      debugPrint('投稿制限読み込みエラー: $e');
+    }
+  }
+
   // デュアルモード: バック録画完了後にフロントへ自動切替
   Future<void> _switchToFrontForDual(XFile backFile) async {
     setState(() {
@@ -470,6 +496,49 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
               ),
+
+            // 投稿可能数表示
+            Positioned(
+              bottom: 140,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isPenalized
+                      ? Colors.red.withOpacity(0.8)
+                      : Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _isPenalized ? Colors.red : Colors.white30,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'あと $_postLimit 本',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (_isPenalized)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'ペナルティ中',
+                          style: TextStyle(
+                            color: Colors.yellow,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
 
             // 下部コントロール
             Positioned(
