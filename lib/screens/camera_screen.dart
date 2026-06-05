@@ -776,20 +776,51 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-            // 動画プレビュー（フィルター適用）
+            // プレビュー（写真/動画）
             Expanded(
-              child: _previewController != null &&
-                      _previewController!.value.isInitialized
-                  ? Center(
-                      child: AspectRatio(
-                        aspectRatio: _previewController!.value.aspectRatio,
-                        child: filter.colorFilter != null
-                            ? ColorFiltered(
-                                colorFilter: filter.colorFilter!,
-                                child: VideoPlayer(_previewController!),
+              child: _recordedVideo != null
+                  ? Builder(
+                      builder: (context) {
+                        // 写真ファイルかどうか判定
+                        final isPhoto = _recordedVideo!.path.toLowerCase().endsWith('.jpg') ||
+                            _recordedVideo!.path.toLowerCase().endsWith('.png');
+
+                        if (isPhoto) {
+                          // 写真プレビュー
+                          return Center(
+                            child: filter.colorFilter != null
+                                ? ColorFiltered(
+                                    colorFilter: filter.colorFilter!,
+                                    child: Image.file(
+                                      File(_recordedVideo!.path),
+                                      fit: BoxFit.contain,
+                                    ),
+                                  )
+                                : Image.file(
+                                    File(_recordedVideo!.path),
+                                    fit: BoxFit.contain,
+                                  ),
+                          );
+                        }
+
+                        // 動画プレビュー
+                        return _previewController != null &&
+                                _previewController!.value.isInitialized
+                            ? Center(
+                                child: AspectRatio(
+                                  aspectRatio: _previewController!.value.aspectRatio,
+                                  child: filter.colorFilter != null
+                                      ? ColorFiltered(
+                                          colorFilter: filter.colorFilter!,
+                                          child: VideoPlayer(_previewController!),
+                                        )
+                                      : VideoPlayer(_previewController!),
+                                ),
                               )
-                            : VideoPlayer(_previewController!),
-                      ),
+                            : const Center(
+                                child: CircularProgressIndicator(color: Colors.white),
+                              );
+                      },
                     )
                   : const Center(
                       child: CircularProgressIndicator(color: Colors.white),
