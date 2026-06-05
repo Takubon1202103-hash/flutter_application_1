@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -188,11 +190,15 @@ class _CameraScreenState extends State<CameraScreen>
       final shotState = context.read<ShotState>();
       final isLate = shotState.calculateIsLate(DateTime.now());
       final locationName = await LocationService.getCurrentLocationName();
+      final now = DateTime.now();
 
       final caption = _captionController.text.trim();
       final filterName = _filterIndex > 0
           ? kVideoFilters[_filterIndex].name
           : null;
+
+      // 通知時刻との比較
+      await _checkNotificationTiming(now);
 
       await PostService.uploadPost(
         File(_recordedVideo!.path),
@@ -204,7 +210,7 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       if (mounted) {
-        shotState.markPosted(DateTime.now());
+        shotState.markPosted(now);
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -215,6 +221,56 @@ class _CameraScreenState extends State<CameraScreen>
         setState(() => _isUploading = false);
       }
     }
+  }
+
+  Future<void> _checkNotificationTiming(DateTime postedTime) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final dateKey = '${postedTime.year}-${postedTime.month.toString().padLeft(2, '0')}-${postedTime.day.toString().padLeft(2, '0')}';
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .doc(dateKey)
+        .get();
+
+    if (!doc.exists) return;
+
+    final sentAtList = (doc['sentAt'] as List?)?.cast<Timestamp>() ?? [];
+    if (sentAtList.isEmpty) return;
+
+    // 最後の通知時刻を確認
+    final lastNotification = sentAtList.last.toDate();
+    final diffMinutes = postedTime.difference(lastNotification).inMinutes;
+
+    // 10分以内か判定
+    final isOnTime = diffMinutes <= 10;
+
+    // Firestore に記録
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .doc(dateKey)
+        .update({
+          'postedAt': postedTime,
+          'isOnTime': isOnTime,
+        });
+
+    // ペナルティ判定
+    if (!isOnTime) {
+      await _applyPenalty(user.uid);
+    }
+  }
+
+  Future<void> _applyPenalty(String uid) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isPenalized': true,
+      'postLimit': 3,
+      'penaltyExpireAt': DateTime.now().add(const Duration(hours: 24)),
+    });
   }
 
   // デュアルモード: バック録画完了後にフロントへ自動切替
