@@ -507,7 +507,7 @@ class _VideoPageState extends State<_VideoPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
               widget.caption!,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.left,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
