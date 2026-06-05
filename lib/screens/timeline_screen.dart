@@ -587,7 +587,7 @@ class _VideoPageState extends State<_VideoPage> {
                 // 右側: リアクションボタン（縦配置）
                 Positioned(
                   right: 12,
-                  bottom: 80,
+                  bottom: 60,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
