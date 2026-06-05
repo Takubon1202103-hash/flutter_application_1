@@ -570,44 +570,47 @@ class _VideoPageState extends State<_VideoPage> {
                       ),
                     ),
                   ),
+                // 右側: リアクションボタン（縦配置）
+                Positioned(
+                  right: 12,
+                  bottom: 80,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _SideButton(postId: widget.postId),
+                      const SizedBox(height: 18),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => PostDetailScreen(
+                                postId: widget.postId,
+                                postData: widget.postData,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.chat_bubble_outline,
+                                color: Colors.white, size: 28),
+                            const SizedBox(height: 4),
+                            const Text('コメント',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                )),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _ReactionButton(postId: widget.postId),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ),
-        // 下部: リアクションボタン
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _SideButton(postId: widget.postId),
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => PostDetailScreen(
-                        postId: widget.postId,
-                        postData: widget.postData,
-                      ),
-                    ),
-                  );
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.chat_bubble_outline,
-                        color: Colors.white, size: 28),
-                    const SizedBox(height: 4),
-                    const Text('コメント',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                        )),
-                  ],
-                ),
-              ),
-              _ReactionButton(postId: widget.postId),
-            ],
           ),
         ),
       ],
