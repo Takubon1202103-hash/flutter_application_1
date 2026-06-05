@@ -22,7 +22,11 @@ class PostDetailScreen extends StatefulWidget {
 class _PostDetailScreenState extends State<PostDetailScreen> {
   VideoPlayerController? _videoController;
   final _commentController = TextEditingController();
+  late final _captionController = TextEditingController(
+    text: widget.postData['caption'] as String? ?? '',
+  );
   bool _posting = false;
+  bool _editingCaption = false;
 
   @override
   void initState() {
@@ -45,7 +49,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   void dispose() {
     _videoController?.dispose();
     _commentController.dispose();
+    _captionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveCaption() async {
+    final newCaption = _captionController.text.trim();
+    await FirebaseFirestore.instance
+        .collection('posts')
+        .doc(widget.postId)
+        .update({'caption': newCaption});
+    setState(() => _editingCaption = false);
   }
 
   Future<void> _postComment() async {
@@ -211,16 +225,91 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
 
           // キャプション
-          if (caption != null && caption.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(caption,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 14, height: 1.4)),
-              ),
-            ),
+          Builder(
+            builder: (context) {
+              final isOwner = FirebaseAuth.instance.currentUser?.uid ==
+                  widget.postData['userId'];
+
+              if (_editingCaption && isOwner) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _captionController,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'キャプションを入力...',
+                            hintStyle:
+                                const TextStyle(color: Color(0xFF555555)),
+                            filled: true,
+                            fillColor: const Color(0xFF1A1A1A),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        children: [
+                          GestureDetector(
+                            onTap: _saveCaption,
+                            child: const Icon(Icons.check_circle,
+                                color: Colors.green, size: 28),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () {
+                              _captionController.text =
+                                  widget.postData['caption'] as String? ?? '';
+                              setState(() => _editingCaption = false);
+                            },
+                            child: const Icon(Icons.cancel,
+                                color: Colors.red, size: 28),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (caption != null && caption.isNotEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: GestureDetector(
+                    onTap: isOwner
+                        ? () => setState(() => _editingCaption = true)
+                        : null,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        caption,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return const SizedBox();
+            },
+          ),
 
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
