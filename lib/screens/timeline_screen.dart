@@ -166,6 +166,22 @@ class _TikTokFeedState extends State<_TikTokFeed> {
   final Map<int, VideoPlayerController> _controllers = {};
 
   @override
+  void activate() {
+    super.activate();
+    // ホーム画面に戻ってきたときに現在のページの動画を再生再開
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        final controller = _controllers[_currentPage];
+        if (controller != null &&
+            controller.value.isInitialized &&
+            !controller.value.isPlaying) {
+          controller.play();
+        }
+      }
+    });
+  }
+
+  @override
   void deactivate() {
     // ホーム画面を離脱したら、すべての動画を停止
     for (final c in _controllers.values) {

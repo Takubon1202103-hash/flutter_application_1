@@ -14,18 +14,32 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-  static const _screens = [
-    TimelineScreen(),     // 0: ホーム
-    FriendsScreen(),      // 1: 友達
-    VideoHistoryScreen(), // 2: 写真
-    ProfileScreen(),      // 3: マイページ
+  final _screens = [
+    const TimelineScreen(),     // 0: ホーム
+    const FriendsScreen(),      // 1: 友達
+    const VideoHistoryScreen(), // 2: 写真
+    const ProfileScreen(),      // 3: マイページ
   ];
 
   void _openCamera() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const CameraScreen()),
     );
+  }
+
+  void _onNavTap(int index) {
+    setState(() => _currentIndex = index);
+
+    // ホームボタン（0）を押したら動画を再生、他のボタンは停止
+    if (index == 0) {
+      // ホーム画面に戻ってきたときに動画を再生再開
+      Future.delayed(const Duration(milliseconds: 100), () {
+        // TimelineScreen 内の _TikTokFeed の resumeVideo を呼び出す
+        // （直接呼び出しは難しいため、別の方法を検討）
+      });
+    }
   }
 
   @override
@@ -37,7 +51,7 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: _BottomNavBar(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: _onNavTap,
         onCameraTap: _openCamera,
       ),
     );
