@@ -4,6 +4,8 @@ import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import '../services/location_service.dart';
@@ -339,10 +341,24 @@ class _CameraScreenState extends State<CameraScreen>
       // 通知時刻との比較
       await _checkNotificationTiming(now);
 
+      // デュアル撮影時は FFmpeg で結合
+      File? uploadFile = File(_recordedVideo!.path);
+      if (_backVideo != null && _frontVideo != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('動画を結合中...')),
+          );
+        }
+        final mergedFile = await _mergeVideoAndPhoto();
+        if (mergedFile != null) {
+          uploadFile = mergedFile;
+        }
+      }
+
       await PostService.uploadPost(
-        File(_recordedVideo!.path),
+        uploadFile,
         isLate: isLate,
-        frontVideoFile: _frontVideo != null ? File(_frontVideo!.path) : null,
+        frontVideoFile: null, // 既に結合済み
         locationName: locationName,
         caption: caption.isNotEmpty ? caption : null,
         filterName: filterName,
@@ -359,6 +375,56 @@ class _CameraScreenState extends State<CameraScreen>
         );
         setState(() => _isUploading = false);
       }
+    }
+  }
+
+  Future<File?> _mergeVideoAndPhoto() async {
+    if (_backVideo == null || _frontVideo == null) return null;
+
+    try {
+      final tmpDir = Directory.systemTemp;
+      final mergedFile = File('${tmpDir.path}/merged_${DateTime.now().millisecondsSinceEpoch}.mp4');
+
+      final backVideoPath = _backVideo!.path;
+      final frontImagePath = _frontVideo!.path;
+
+      // レイアウトに応じた FFmpeg コマンド構築
+      String ffmpegCommand;
+
+      if (_mergeLayoutIndex == 0) {
+        // 上下配置
+        ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
+            '-filter_complex "[0:v]scale=1080:1920[back];[1:v]scale=1080:960[front];'
+            '[back][front]vstack=inputs=2[out]" '
+            '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
+      } else if (_mergeLayoutIndex == 1) {
+        // 左右配置
+        ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
+            '-filter_complex "[0:v]scale=540:1920[back];[1:v]scale=540:1920[front];'
+            '[back][front]hstack=inputs=2[out]" '
+            '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
+      } else {
+        // PiP（Picture-in-Picture）配置
+        ffmpegCommand = '-i "$backVideoPath" -i "$frontImagePath" '
+            '-filter_complex "[0:v]scale=1080:1920[back];[1:v]scale=270:480[front];'
+            '[back][front]overlay=x=805:y=1440[out]" '
+            '-map "[out]" -map 0:a -c:v libx264 -preset fast -c:a aac -y "${mergedFile.path}"';
+      }
+
+      // FFmpeg 実行
+      final session = await FFmpegKit.execute(ffmpegCommand);
+      final returnCode = await session.getReturnCode();
+
+      if (ReturnCode.isSuccess(returnCode)) {
+        debugPrint('動画・写真結合成功: ${mergedFile.path}');
+        return mergedFile;
+      } else {
+        debugPrint('FFmpeg エラー: ${await session.getOutput()}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('動画・写真結合失敗: $e');
+      return null;
     }
   }
 
