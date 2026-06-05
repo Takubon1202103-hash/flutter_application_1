@@ -349,6 +349,17 @@ class _CameraScreenState extends State<CameraScreen>
         filterName: filterName,
       );
 
+      // postLimit をデクリメント
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+              'postLimit': FieldValue.increment(-1),
+            });
+      }
+
       if (mounted) {
         shotState.markPosted(now);
         Navigator.of(context).pop(true);

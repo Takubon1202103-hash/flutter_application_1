@@ -60,10 +60,42 @@ class ShotState extends ChangeNotifier {
       _isLate = data['isLate'] as bool? ?? false;
     }
 
+    // postLimit の 24 時間リセット処理
+    await _resetPostLimitIfNeeded(uid);
+
     _shotTime = await _fetchShotTime();
     await _registerFCMToken(uid);
     _initialized = true;
     notifyListeners();
+  }
+
+  // 前回のリセット時刻から 24 時間経過したら postLimit をリセット
+  Future<void> _resetPostLimitIfNeeded(String uid) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      final data = userDoc.data();
+      if (data == null) return;
+
+      final lastResetAt = (data['lastPostLimitResetAt'] as Timestamp?)?.toDate();
+      final now = DateTime.now();
+
+      // 24 時間以上経過していたらリセット
+      if (lastResetAt == null || now.difference(lastResetAt).inHours >= 24) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({
+              'postLimit': 6,
+              'lastPostLimitResetAt': FieldValue.serverTimestamp(),
+            });
+      }
+    } catch (e) {
+      debugPrint('postLimit リセットエラー: $e');
+    }
   }
 
   Future<void> _registerFCMToken(String uid) async {
