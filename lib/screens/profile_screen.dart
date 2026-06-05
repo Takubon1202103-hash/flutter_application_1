@@ -141,7 +141,8 @@ class ProfileScreen extends StatelessWidget {
                               .doc(user.uid)
                               .snapshots(),
                           builder: (context, snap) {
-                            final bio = snap.data?.get('bio') as String? ?? '';
+                            final bio = (snap.data?.data() as Map<String, dynamic>?)
+                                ?['bio'] as String? ?? '';
                             if (bio.isEmpty) return const SizedBox();
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
