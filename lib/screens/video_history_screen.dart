@@ -123,26 +123,28 @@ class _VideoThumbnail extends StatefulWidget {
 }
 
 class _VideoThumbnailState extends State<_VideoThumbnail> {
-  late Future<Uint8List?> _thumbnailFuture;
+  late VideoPlayerController _controller;
 
   @override
   void initState() {
     super.initState();
-    _thumbnailFuture = _generateThumbnail();
+    _initializeController();
   }
 
-  Future<Uint8List?> _generateThumbnail() async {
+  Future<void> _initializeController() async {
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     try {
-      final uint8list = await VideoThumbnail.thumbnailData(
-        video: widget.videoUrl,
-        imageFormat: ImageFormat.PNG,
-        maxHeight: 150,
-        quality: 75,
-      );
-      return uint8list;
+      await _controller.initialize();
+      if (mounted) setState(() {});
     } catch (e) {
-      return null;
+      // エラー時は何もしない
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _showContextMenu(BuildContext context) {
@@ -259,43 +261,33 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  FutureBuilder<Uint8List?>(
-                    future: _thumbnailFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            snapshot.data!,
-                            fit: BoxFit.cover,
+                  if (_controller.value.isInitialized)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          VideoPlayer(_controller),
+                          Container(
+                            color: Colors.black.withOpacity(0.2),
                           ),
-                        );
-                      } else if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(
-                          color: Colors.black,
-                          child: const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.white30),
-                              ),
-                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.black,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white30),
                           ),
-                        );
-                      } else {
-                        return Container(
-                          color: Colors.black,
-                          child: const Icon(
-                            Icons.videocam_outlined,
-                            color: Colors.white30,
-                            size: 32,
-                          ),
-                        );
-                      }
-                    },
-                  ),
+                        ),
+                      ),
+                    ),
                   const Center(
                     child: Icon(
                       Icons.play_circle_outlined,
