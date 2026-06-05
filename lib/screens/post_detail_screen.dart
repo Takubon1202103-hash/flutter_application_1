@@ -401,11 +401,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           // キャプション編集ボタン（投稿者本人のみ）
           Builder(
             builder: (context) {
-              final isOwner = FirebaseAuth.instance.currentUser?.uid ==
-                  widget.postData['userId'];
-              if (!isOwner) return const SizedBox();
+              final currentUid = FirebaseAuth.instance.currentUser?.uid;
+              final postUserId = widget.postData['userId'] as String?;
+              final isOwner = currentUid != null && currentUid == postUserId;
 
-              return Padding(
+              return Visibility(
+                visible: isOwner,
+                child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: Row(
                   children: [
@@ -486,6 +488,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       ),
                     ],
                   ],
+                ),
+              );
                 ),
               );
             },
