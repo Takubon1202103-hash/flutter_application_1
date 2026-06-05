@@ -72,6 +72,68 @@ exports.sendDailyNotifications = functions.pubsub
     }
   });
 
+// 投稿時にフォロワーに通知を送信
+exports.notifyFollowersOnPost = functions.firestore
+  .document('posts/{postId}')
+  .onCreate(async (snap, context) => {
+    const post = snap.data();
+    const userId = post.userId;
+    const username = post.username || 'ユーザー';
+
+    try {
+      const db = admin.firestore();
+
+      // ユーザーのフォロワーを取得
+      const followersSnap = await db
+        .collection('users')
+        .doc(userId)
+        .collection('followers')
+        .get();
+
+      if (followersSnap.empty) {
+        console.log(`${username} にフォロワーがいません`);
+        return null;
+      }
+
+      // 各フォロワーに通知を送信
+      for (const followerDoc of followersSnap.docs) {
+        const followerId = followerDoc.id;
+
+        // FCM トークンを取得
+        const tokensSnap = await db
+          .collection('users')
+          .doc(followerId)
+          .collection('fcmTokens')
+          .get();
+
+        if (tokensSnap.empty) continue;
+
+        const tokens = tokensSnap.docs.map(doc => doc.id);
+
+        // 通知を送信
+        const message = {
+          notification: {
+            title: `${username} が投稿しました！`,
+            body: 'OneShot - 最新の投稿をチェック',
+          },
+          tokens: tokens,
+        };
+
+        try {
+          await admin.messaging().sendMulticast(message);
+          console.log(`${followerId} に投稿通知を送信しました`);
+        } catch (err) {
+          console.error(`${followerId} への通知送信失敗: ${err}`);
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('投稿通知エラー:', error);
+      throw error;
+    }
+  });
+
 // ランダムな時間を 2 回生成
 function generateRandomTimes(count) {
   const times = [];
