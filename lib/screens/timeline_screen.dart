@@ -501,6 +501,21 @@ class _VideoPageState extends State<_VideoPage> {
             ],
           ),
         ),
+        // キャプション表示
+        if (widget.caption != null && widget.caption!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              widget.caption!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         // 中央: 動画エリア
         Expanded(
           child: GestureDetector(
@@ -551,25 +566,6 @@ class _VideoPageState extends State<_VideoPage> {
                   const Center(
                     child: Icon(Icons.pause_circle_filled,
                         color: Colors.white54, size: 80),
-                  ),
-                if (widget.caption != null && widget.caption!.isNotEmpty)
-                  Positioned(
-                    bottom: 12,
-                    left: 12,
-                    right: 12,
-                    child: Text(
-                      widget.caption!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        height: 1.3,
-                        shadows: [
-                          Shadow(blurRadius: 4, color: Colors.black87)
-                        ],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ),
                 if (controller != null && controller.value.isInitialized)
                   Positioned(
