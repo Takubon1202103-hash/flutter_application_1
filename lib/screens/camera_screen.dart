@@ -149,13 +149,62 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final photo = await _controller!.takePicture();
-      setState(() {
-        _capturedPhoto = photo;
-      });
-      // プレビュー画面を表示
-      if (mounted) {
-        _showPhotoPreview();
+
+      // デュアルモード: バック撮影完了 → フロントへ
+      if (_dualMode && !_recordingFront) {
+        setState(() {
+          _backVideo = photo; // 写真をバック用に保存
+          _recordingFront = true;
+          _isInitialized = false;
+        });
+
+        // フロントカメラに切替
+        final frontIndex = _cameras.indexWhere(
+          (c) => c.lensDirection == CameraLensDirection.front,
+        );
+        if (frontIndex == -1) {
+          // フロントカメラなければそのまま完了
+          setState(() {
+            _recordedVideo = photo;
+            _recordingFront = false;
+          });
+          if (mounted) _showPhotoPreview();
+          return;
+        }
+
+        _selectedCameraIndex = frontIndex;
+        await _setupCamera(_cameras[frontIndex]);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('フロントカメラで自撮り写真を撮影してください'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
       }
+
+      // デュアルモード: フロント撮影完了
+      if (_dualMode && _recordingFront) {
+        setState(() {
+          _frontVideo = photo; // 写真をフロント用に保存
+          _recordingFront = false;
+        });
+        // バック写真をプレビューとして使う
+        if (_backVideo != null) {
+          setState(() => _recordedVideo = _backVideo);
+        }
+        if (mounted) _showPhotoPreview();
+        return;
+      }
+
+      // 通常モード
+      setState(() {
+        _recordedVideo = photo;
+      });
+      if (mounted) _showPhotoPreview();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
