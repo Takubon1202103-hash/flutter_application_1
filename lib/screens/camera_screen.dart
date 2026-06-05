@@ -144,6 +144,85 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  Future<void> _takePhoto() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      final photo = await _controller!.takePicture();
+      setState(() {
+        _capturedPhoto = photo;
+      });
+      // プレビュー画面を表示
+      if (mounted) {
+        _showPhotoPreview();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('写真撮影に失敗しました: $e')),
+        );
+      }
+    }
+  }
+
+  void _showPhotoPreview() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        color: Colors.black,
+        child: Column(
+          children: [
+            Expanded(
+              child: Image.file(
+                File(_capturedPhoto!.path),
+                fit: BoxFit.contain,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() => _capturedPhoto = null);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('再撮影'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _usePhoto();
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('使用する'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _usePhoto() async {
+    if (_capturedPhoto == null) return;
+    // 写真をビデオファイルとして扱う（後処理用）
+    setState(() {
+      _recordedVideo = _capturedPhoto;
+      _capturedPhoto = null;
+    });
+  }
+
   Future<void> _stopRecording() async {
     final controller = _controller;
     if (controller == null || !_isRecording) return;
@@ -415,6 +494,26 @@ class _CameraScreenState extends State<CameraScreen>
                     icon: const Icon(Icons.close, color: Colors.white, size: 28),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
+                  // 写真/動画切り替え
+                  if (!_isRecording && !_recordingFront)
+                    GestureDetector(
+                      onTap: () => setState(() => _isPhotoMode = !_isPhotoMode),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          _isPhotoMode ? '📷 写真' : '🎥 動画',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (!_isRecording) ...[
                     // デュアルモードトグル
                     GestureDetector(
@@ -580,11 +679,13 @@ class _CameraScreenState extends State<CameraScreen>
                   else
                     const SizedBox(height: 16),
 
-                  // 録画ボタン
+                  // 撮影ボタン（写真/動画）
                   GestureDetector(
                     onTap:
                         _isInitialized
-                            ? (_isRecording ? _stopRecording : _startRecording)
+                            ? (_isPhotoMode
+                                ? _takePhoto
+                                : (_isRecording ? _stopRecording : _startRecording))
                             : null,
                     child: Container(
                       width: 84,
