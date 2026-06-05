@@ -42,6 +42,10 @@ class _CameraScreenState extends State<CameraScreen>
   XFile? _frontVideo;
   bool _recordingFront = false;
 
+  // 写真/動画モード
+  bool _isPhotoMode = false;
+  XFile? _capturedPhoto;
+
   // 編集
   int _filterIndex = 0;
   final _captionController = TextEditingController();
