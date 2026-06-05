@@ -301,6 +301,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
             return PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
+              physics: const BouncingScrollPhysics(),
               onPageChanged: (p) => _onPageChanged(p, docs),
               itemCount: docs.length,
               itemBuilder: (context, index) {
