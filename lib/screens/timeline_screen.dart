@@ -167,8 +167,11 @@ class _TikTokFeedState extends State<_TikTokFeed> {
 
   @override
   void deactivate() {
+    // ホーム画面を離脱したら、すべての動画を停止
     for (final c in _controllers.values) {
-      c.pause();
+      if (c.value.isPlaying) {
+        c.pause();
+      }
     }
     super.deactivate();
   }
