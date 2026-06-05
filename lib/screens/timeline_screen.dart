@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -302,9 +301,7 @@ class _TikTokFeedState extends State<_TikTokFeed> {
             return PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
-              physics: Platform.isIOS
-                  ? const BouncingScrollPhysics()
-                  : const ClampingScrollPhysics(),
+              physics: const BouncingScrollPhysics(),
               onPageChanged: (p) => _onPageChanged(p, docs),
               itemCount: docs.length,
               itemBuilder: (context, index) {
