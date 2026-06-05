@@ -959,6 +959,48 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
+            // 結合レイアウト選択（デュアル撮影時のみ表示）
+            if (_backVideo != null && _frontVideo != null)
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  itemCount: 3,
+                  itemBuilder: (context, index) {
+                    final layouts = ['↕️ 上下', '↔️ 左右', '🎞️ PiP'];
+                    final selected = _mergeLayoutIndex == index;
+                    return GestureDetector(
+                      onTap: () => setState(() => _mergeLayoutIndex = index),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? Colors.teal
+                              : const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(20),
+                          border: selected
+                              ? null
+                              : Border.all(color: const Color(0xFF333333)),
+                        ),
+                        child: Text(
+                          layouts[index],
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.white70,
+                            fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
             // キャプション入力
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
